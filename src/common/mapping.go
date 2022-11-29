@@ -81,8 +81,7 @@ func GetInstIDField(objType string) string {
 // GetObjByType TODO
 func GetObjByType(objType string) string {
 	switch objType {
-	case BKInnerObjIDBizSet, BKInnerObjIDApp, BKInnerObjIDSet,
-		BKInnerObjIDModule, BKInnerObjIDProc,
+	case BKInnerObjIDApp, BKInnerObjIDProc,
 		BKInnerObjIDPlat:
 		return objType
 	default:
