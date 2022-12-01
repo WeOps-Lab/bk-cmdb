@@ -15,7 +15,6 @@ package model
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	"configcenter/src/common"
@@ -435,8 +434,8 @@ func (m *modelManager) SearchModelWithAttribute(kit *rest.Kit, inputParam metada
 
 // validIDStartWithBK validate the id start with bk or BK
 func validIDStartWithBK(kit *rest.Kit, modelID string) error {
-	if strings.HasPrefix(strings.ToLower(modelID), "bk") {
-		return kit.CCError.Errorf(common.CCErrCommParamsIsInvalid, "bk_obj_id value can not start with bk or BK")
-	}
+	//if strings.HasPrefix(strings.ToLower(modelID), "bk") {
+	//	return kit.CCError.Errorf(common.CCErrCommParamsIsInvalid, "bk_obj_id value can not start with bk or BK")
+	//}
 	return nil
 }
