@@ -1,0 +1,105 @@
+
+- name: admin
+  module: cmdb
+  project_dir: cmdb/server
+  alias: cmdb
+  language: golang
+  version: 3.10.21
+
+- name: api
+  module: cmdb
+  project_dir: cmdb/server
+  alias: cmdb
+  language: golang
+  version: 3.10.21
+
+- name: auth
+  module: cmdb
+  project_dir: cmdb/server
+  alias: cmdb
+  language: golang
+  version: 3.10.21
+
+- name: cloud
+  module: cmdb
+  project_dir: cmdb/server
+  alias: cmdb
+  language: golang
+  version: 3.10.21
+
+- name: cache
+  module: cmdb
+  project_dir: cmdb/server
+  alias: cmdb
+  language: golang
+  version: 3.10.21
+
+- name: core
+  module: cmdb
+  project_dir: cmdb/server
+  alias: cmdb
+  language: golang
+  version: 3.10.21
+
+- name: datacollection
+  module: cmdb
+  project_dir: cmdb/server
+  alias: cmdb
+  language: golang
+  version: 3.10.21
+
+- name: event
+  module: cmdb
+  project_dir: cmdb/server
+  alias: cmdb
+  language: golang
+  version: 3.10.21
+
+- name: host
+  module: cmdb
+  project_dir: cmdb/server
+  alias: cmdb
+  language: golang
+  version: 3.10.21
+
+- name: operation
+  module: cmdb
+  project_dir: cmdb/server
+  alias: cmdb
+  language: golang
+  version: 3.10.21
+
+- name: proc
+  module: cmdb
+  project_dir: cmdb/server
+  alias: cmdb
+  language: golang
+  version: 3.10.21
+
+- name: synchronize
+  module: cmdb
+  project_dir: cmdb/server
+  alias: cmdb
+  language: golang
+  version: 3.10.21
+
+- name: task
+  module: cmdb
+  project_dir: cmdb/server
+  alias: cmdb
+  language: golang
+  version: 3.10.21
+
+- name: topo
+  module: cmdb
+  project_dir: cmdb/server
+  alias: cmdb
+  language: golang
+  version: 3.10.21
+
+- name: web
+  module: cmdb
+  project_dir: cmdb/server
+  alias: cmdb
+  language: golang
+  version: 3.10.21
