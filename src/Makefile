@@ -1,6 +1,6 @@
 
 IMAGE?=image_placeholder
-NPM?=npm
+NPM?=yarn
 PROJECT_PATH=$(shell cd ../;  pwd)
 
 include ../scripts/Makefile
