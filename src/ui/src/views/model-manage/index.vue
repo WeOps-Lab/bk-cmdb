@@ -294,7 +294,7 @@
                 :placeholder="$t('请填写英文开头，下划线，数字，英文的组合')"
                 :disabled="groupDialog.isEdit"
                 v-model.trim="groupDialog.data['bk_classification_id']"
-                v-validate="'required|classifyId|length:128|reservedWord'">
+                v-validate="'required|classifyId|length:128'">
               </bk-input>
               <p class="form-error" :title="errors.first('classifyId')">
                 {{ errors.first("classifyId") }}

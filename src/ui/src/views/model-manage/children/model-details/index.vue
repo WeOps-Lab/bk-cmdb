@@ -48,7 +48,7 @@
                 font-size="12px"
                 @confirm="handleModelNameUpdateConfirm"
                 :editable="isEditable"
-                validate="required|singlechar|length:256|reservedWord"
+                validate="required|singlechar|length:256"
                 :auth="{ type: $OPERATION.U_MODEL, relation: [modelId] }"
               >
                 <template #append>

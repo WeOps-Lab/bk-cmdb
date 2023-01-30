@@ -60,7 +60,7 @@
                 name="modelId"
                 :placeholder="$t('模型唯一标识提示语')"
                 v-model.trim="modelDialog.data['bk_obj_id']"
-                v-validate="'required|modelId|length:115|reservedWord'">
+                v-validate="'required|modelId|length:115'">
               </bk-input>
               <p class="form-error" :title="errors.first('modelId')">{{errors.first('modelId')}}</p>
             </div>
