@@ -13,3 +13,4 @@ src/web*/cmdb_*
 .DS_Store
 .vscode
 vendor
+dev

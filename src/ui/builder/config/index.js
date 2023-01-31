@@ -57,7 +57,7 @@ const dev = {
     '/proxy': {
       logLevel: 'info',
       changeOrigin: true,
-      target: 'http://{webserver地址}/',
+      target: 'http://127.0.0.1:9000/proxy',
       pathRewrite: {
         '^/proxy': ''
       }
@@ -65,7 +65,7 @@ const dev = {
   },
   // Various Dev Server settings
   host: 'localhost', // can be overwritten by process.env.HOST
-  port: 9090, // can be overwritten by process.env.PORT, if port is in use, a free one will be determined
+  port: 19090, // can be overwritten by process.env.PORT, if port is in use, a free one will be determined
   autoOpenBrowser: true,
   errorOverlay: true,
   notifyOnErrors: true,
