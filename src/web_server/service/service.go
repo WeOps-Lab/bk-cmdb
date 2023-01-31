@@ -92,6 +92,10 @@ func (s *Service) WebService() *gin.Engine {
 	ws.GET("/login", s.Login)
 	ws.POST("/login", s.LoginUser)
 	ws.POST("/object/object/:bk_obj_id/import", s.ImportObject)
+
+	// 此接口为兼容6.0.5版本的CMDB WEB接口补充的路由，WeOps4.0版本后可以去掉此路由
+	ws.POST("/object/owner/0/object/:bk_obj_id/import", s.ImportObject)
+
 	ws.POST("/object/object/:bk_obj_id/export", s.ExportObject)
 	ws.POST("/object/exportmany", s.BatchExportObject)
 	ws.POST("/object/importmany/analysis", s.BatchImportObjectAnalysis)
