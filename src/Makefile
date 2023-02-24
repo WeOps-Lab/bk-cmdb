@@ -85,33 +85,32 @@ cleanall:
 
 
 release:
-	rm -Rf /opt/cmdb
-	mkdir /opt/cmdb
-	cp -Rf ../resources/errors  /opt/cmdb
-	cp -Rf ../resources/language  /opt/cmdb
-	cp -Rf ./bin/build/weops/monstache /opt/cmdb
-	cp -Rf ./projects.yaml /opt/cmdb
-	cp -Rf ./VERSION /opt/cmdb
-	cp ../readme.md /opt/cmdb
-	mkdir -p /opt/cmdb/support-files
-	cp -Rf   ../docs/support-file/config/templates /opt/cmdb/support-files/
-	mkdir -p /opt/cmdb/server/bin
-	cp -Rf ./bin/build/weops/cmdb_adminserver/cmdb_adminserver /opt/cmdb/server/bin/
-	cp -Rf ./bin/build/weops/cmdb_apiserver/cmdb_apiserver  /opt/cmdb/server/bin/
-	cp -Rf ./bin/build/weops/cmdb_authserver/cmdb_authserver  /opt/cmdb/server/bin/
-	cp -Rf ./bin/build/weops/cmdb_cacheservice/cmdb_cacheservice  /opt/cmdb/server/bin/
-	cp -Rf ./bin/build/weops/cmdb_cloudserver/cmdb_cloudserver  /opt/cmdb/server/bin/
-	cp -Rf ./bin/build/weops/cmdb_coreservice/cmdb_coreservice  /opt/cmdb/server/bin/
-	cp -Rf ./bin/build/weops/cmdb_datacollection/cmdb_datacollection  /opt/cmdb/server/bin/
-	cp -Rf ./bin/build/weops/cmdb_eventserver/cmdb_eventserver  /opt/cmdb/server/bin/
-	cp -Rf ./bin/build/weops/cmdb_hostserver/cmdb_hostserver  /opt/cmdb/server/bin/
-	cp -Rf ./bin/build/weops/cmdb_operationserver/cmdb_operationserver  /opt/cmdb/server/bin/
-	cp -Rf ./bin/build/weops/cmdb_procserver/cmdb_procserver  /opt/cmdb/server/bin/
-	cp -Rf ./bin/build/weops/cmdb_synchronizeserver/cmdb_synchronizeserver  /opt/cmdb/server/bin/
-	cp -Rf ./bin/build/weops/cmdb_taskserver/cmdb_taskserver  /opt/cmdb/server/bin/
-	cp -Rf ./bin/build/weops/cmdb_toposerver/cmdb_toposerver  /opt/cmdb/server/bin/
-	cp -Rf ./bin/build/weops/cmdb_webserver/cmdb_webserver  /opt/cmdb/server/bin/
-	cp -Rf ./bin/build/weops/tool_ctl/tool_ctl  /opt/cmdb/server/bin/
-	cp -Rf ./bin/build/weops/web  /opt/cmdb/
-	cd /opt
-	tar -zcvf ./cmdb_ce-3.10.21.tgz cmdb/
+	rm -Rf /opt/release/cmdb
+	mkdir /opt/release/cmdb
+	cp -Rf ../resources/errors  /opt/release/cmdb
+	cp -Rf ../resources/language  /opt/release/cmdb
+	cp -Rf ./bin/build/weops/monstache /opt/release/cmdb
+	cp -Rf ./projects.yaml /opt/release/cmdb
+	cp -Rf ./VERSION /opt/release/cmdb
+	cp ../readme.md /opt/release/cmdb
+	mkdir -p /opt/release/cmdb/support-files
+	cp -Rf   ../docs/support-file/config/templates /opt/release/cmdb/support-files/
+	mkdir -p /opt/release/cmdb/server/bin
+	cp -Rf ./bin/build/weops/cmdb_adminserver/cmdb_adminserver /opt/release/cmdb/server/bin/
+	cp -Rf ./bin/build/weops/cmdb_apiserver/cmdb_apiserver  /opt/release/cmdb/server/bin/
+	cp -Rf ./bin/build/weops/cmdb_authserver/cmdb_authserver  /opt/release/cmdb/server/bin/
+	cp -Rf ./bin/build/weops/cmdb_cacheservice/cmdb_cacheservice  /opt/release/cmdb/server/bin/
+	cp -Rf ./bin/build/weops/cmdb_cloudserver/cmdb_cloudserver  /opt/release/cmdb/server/bin/
+	cp -Rf ./bin/build/weops/cmdb_coreservice/cmdb_coreservice  /opt/release/cmdb/server/bin/
+	cp -Rf ./bin/build/weops/cmdb_datacollection/cmdb_datacollection  /opt/release/cmdb/server/bin/
+	cp -Rf ./bin/build/weops/cmdb_eventserver/cmdb_eventserver  /opt/release/cmdb/server/bin/
+	cp -Rf ./bin/build/weops/cmdb_hostserver/cmdb_hostserver  /opt/release/cmdb/server/bin/
+	cp -Rf ./bin/build/weops/cmdb_operationserver/cmdb_operationserver  /opt/release/cmdb/server/bin/
+	cp -Rf ./bin/build/weops/cmdb_procserver/cmdb_procserver  /opt/release/cmdb/server/bin/
+	cp -Rf ./bin/build/weops/cmdb_synchronizeserver/cmdb_synchronizeserver  /opt/release/cmdb/server/bin/
+	cp -Rf ./bin/build/weops/cmdb_taskserver/cmdb_taskserver  /opt/release/cmdb/server/bin/
+	cp -Rf ./bin/build/weops/cmdb_toposerver/cmdb_toposerver  /opt/release/cmdb/server/bin/
+	cp -Rf ./bin/build/weops/cmdb_webserver/cmdb_webserver  /opt/release/cmdb/server/bin/
+	cp -Rf ./bin/build/weops/tool_ctl/tool_ctl  /opt/release/cmdb/server/bin/
+	cp -Rf ./bin/build/weops/web  /opt/release/cmdb/
+	cd /opt/release
