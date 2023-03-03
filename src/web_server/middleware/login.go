@@ -89,7 +89,8 @@ func ValidLogin(config options.Config, disc discovery.DiscoveryInterface) gin.Ha
 			} else {
 				user := user.NewUser(config, Engine, CacheCli)
 				url := user.GetLoginUrl(c)
-				c.Redirect(302, url)
+				c.Header("Location", url)
+				c.Status(302)
 				c.Abort()
 			}
 
