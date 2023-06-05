@@ -1,0 +1,37 @@
+version: '3.1'
+services:
+  redis:
+    image: bitnami/redis
+    restart: always
+    ports:
+      - 6379:6379
+    volumes:
+      - redis-data:/bitnami/redis/data
+    environment:
+      - REDIS_PASSWORD=password
+
+  zookeeper:
+    container_name: zookeeper
+    image: wurstmeister/zookeeper
+    restart: always
+    volumes:
+      - zookeeper-data:/data
+    ports:
+      - "2181:2181"
+
+  mongo:
+    image: mongo:4.2.0
+    restart: always
+    ports:
+      - 27017:27017
+    volumes:
+      - mongo-data:/data/db
+    command: --auth --replSet rs0
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: password
+
+volumes:
+  mongo-data:
+  redis-data:
+  zookeeper-data:
