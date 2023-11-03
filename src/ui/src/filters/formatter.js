@@ -96,6 +96,16 @@ export function enumeration(value, options, showId = false) {
   return option.name
 }
 
+export function enummulti(value, options, showId = false) {
+  const option = (options || []).filter(option => (value || []).includes(option.id))
+  if (!option) {
+    return '--'
+  }
+
+  const list = option.map(op => (showId ? `${op.name}(${op.id})` : op.name))
+  return list.join(', ')
+}
+
 export function foreignkey(value) {
   if (Array.isArray(value)) {
     return value.map(inst => `${inst.bk_inst_name}[${inst.bk_inst_id}]`).join(',')
@@ -117,6 +127,38 @@ export function implode(value, separator = ',') {
   return value.toString()
 }
 
+export function array(value) {
+  if (!value || (Array.isArray(value) && value.length === 0)) {
+    return '--'
+  }
+
+  if (typeof value === 'string') {
+    return value
+  }
+
+  // 字符串数组
+  if (value.every(val => typeof val === 'string')) {
+    return value.toString()
+  }
+
+  return object(value)
+}
+
+export function object(value) {
+  if (!value) {
+    return '--'
+  }
+
+  let result = '--'
+  try {
+    result = JSON.stringify(value)
+  } catch (e) {
+    result = '--'
+  }
+
+  return result
+}
+
 const formatterMap = {
   singlechar,
   longchar,
@@ -129,7 +171,10 @@ const formatterMap = {
   bool,
   foreignkey,
   list,
-  enum: enumeration
+  enum: enumeration,
+  enummulti,
+  array,
+  object
 }
 
 export default function formatter(value, property, options) {

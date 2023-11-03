@@ -24,6 +24,7 @@ import (
 	"configcenter/src/common"
 	"configcenter/src/common/json"
 	"configcenter/src/common/metadata"
+	"configcenter/src/kube/types"
 )
 
 func (ps *parseStream) topology() *parseStream {
@@ -40,7 +41,9 @@ func (ps *parseStream) topology() *parseStream {
 		audit().
 		fullTextSearch().
 		cloudArea().
-		businessSet()
+		businessSet().
+		kube().
+		project()
 
 	return ps
 }
@@ -64,6 +67,7 @@ const (
 	deletePlatformSettingModulePattern  = `/api/v3/topo/delete/biz/extra_moudle`
 )
 
+// NOCC:golint/fnsize(整体属于business操作需要放在一起)
 func (ps *parseStream) business() *parseStream {
 	if ps.shouldReturn() {
 		return ps
@@ -644,8 +648,10 @@ var (
 
 const (
 	findBriefTopologyNodeRelation = "/api/v3/find/topo/biz/brief_node_relation"
+	findHostTopoPath              = "/api/v3/find/host/topopath"
 )
 
+// NOCC:golint/fnsize(设计如此)
 func (ps *parseStream) mainline() *parseStream {
 	if ps.shouldReturn() {
 		return ps
@@ -660,7 +666,8 @@ func (ps *parseStream) mainline() *parseStream {
 
 		bizID, err := strconv.ParseInt(ps.RequestCtx.Elements[5], 10, 64)
 		if err != nil {
-			ps.err = fmt.Errorf("find mainline idle and fault module, but got invalid business id %s", ps.RequestCtx.Elements[5])
+			ps.err = fmt.Errorf("find mainline idle and fault module, but got invalid business id %s",
+				ps.RequestCtx.Elements[5])
 			return ps
 		}
 		ps.Attribute.Resources = []meta.ResourceAttribute{
@@ -739,6 +746,18 @@ func (ps *parseStream) mainline() *parseStream {
 		return ps
 	}
 
+	if ps.hitPattern(findHostTopoPath, http.MethodPost) {
+		ps.Attribute.Resources = []meta.ResourceAttribute{
+			{
+				Basic: meta.Basic{
+					Type:   meta.MainlineInstanceTopology,
+					Action: meta.Find,
+				},
+			},
+		}
+
+		return ps
+	}
 	return ps
 }
 
@@ -819,6 +838,7 @@ var (
 	findModuleByServiceTemplateRegexp = regexp.MustCompile(`^/api/v3/module/bk_biz_id/(?P<bk_biz_id>[0-9]+)/service_template_id/(?P<service_template_id>[0-9]+)/?$`)
 )
 
+// NOCC:golint/fnsize(设计如此)
 func (ps *parseStream) objectModule() *parseStream {
 	if ps.shouldReturn() {
 		return ps
@@ -1134,6 +1154,7 @@ var (
 	findSetBatchRegexp   = regexp.MustCompile(`^/api/v3/findmany/set/bk_biz_id/[0-9]+/?$`)
 )
 
+// NOCC:golint/fnsize(设计如此)
 func (ps *parseStream) objectSet() *parseStream {
 	if ps.shouldReturn() {
 		return ps
@@ -1332,6 +1353,7 @@ var (
 	searchInstAudit   = `/api/v3/find/inst_audit`
 )
 
+// NOCC:golint/fnsize(设计如此)
 func (ps *parseStream) audit() *parseStream {
 	if ps.shouldReturn() {
 		return ps
@@ -1391,7 +1413,7 @@ func (ps *parseStream) audit() *parseStream {
 			return ps
 		}
 
-		// authorize logic reference: https://github.com/Tencent/bk-cmdb/issues/5758
+		// authorize logic reference: https://github.com/TencentBlueKing/bk-cmdb/issues/5758
 		if isMainline {
 			if query.Condition.BizID == 0 {
 				ps.err = fmt.Errorf("bk_biz_id is invalid, rid: %s", ps.RequestCtx.Rid)
@@ -1487,6 +1509,7 @@ var (
 	deleteCloudAreaRegexp = regexp.MustCompile(`^/api/v3/delete/cloudarea/[0-9]+/?$`)
 )
 
+// NOCC:golint/fnsize(设计如此)
 func (ps *parseStream) cloudArea() *parseStream {
 	if ps.shouldReturn() {
 		return ps
@@ -1578,5 +1601,610 @@ func (ps *parseStream) cloudArea() *parseStream {
 		return ps
 	}
 
+	return ps
+}
+
+const (
+	findNodePathForHostPattern = "/api/v3/find/kube/host_node_path"
+)
+
+var (
+	findKubeAttrsRegexp = regexp.MustCompile(`^/api/v3/find/kube/[^\s/]+/attributes$`)
+
+	createKubeClusterRegexp     = regexp.MustCompile(`^/api/v3/create/kube/cluster/bk_biz_id/([0-9]+)$`)
+	deleteKubeClustersRegexp    = regexp.MustCompile(`^/api/v3/delete/kube/cluster/bk_biz_id/([0-9]+)$`)
+	findKubeClusterRegexp       = regexp.MustCompile(`^/api/v3/findmany/kube/cluster/bk_biz_id/([0-9]+)$`)
+	updatemanyKubeClusterRegexp = regexp.MustCompile(`^/api/v3/updatemany/kube/cluster/bk_biz_id/([0-9]+)$`)
+
+	createKubeNodeRegexp     = regexp.MustCompile(`^/api/v3/createmany/kube/node/bk_biz_id/([0-9]+)$`)
+	findKubeNodeRegexp       = regexp.MustCompile(`^/api/v3/findmany/kube/node/bk_biz_id/([0-9]+)$`)
+	deleteKubeNodeRegexp     = regexp.MustCompile(`^/api/v3/deletemany/kube/node/bk_biz_id/([0-9]+)$`)
+	updatemanyKubeNodeRegexp = regexp.MustCompile(`^/api/v3/updatemany/kube/node/bk_biz_id/([0-9]+)$`)
+
+	findKubeTopoPathRegexp  = regexp.MustCompile(`^/api/v3/find/kube/topo_path/bk_biz_id/([0-9]+)$`)
+	findKubeTopoCountRegexp = regexp.MustCompile(`^/api/v3/find/kube/([0-9]+)/topo_node/[^\s/]+/count$`)
+	createKubePodsRegexp    = regexp.MustCompile(`^/api/v3/createmany/kube/pod`)
+
+	createNamespaceRegexp = regexp.MustCompile(`^/api/v3/createmany/kube/namespace/bk_biz_id/([0-9]+)/?$`)
+	updateNamespaceRegexp = regexp.MustCompile(`^/api/v3/updatemany/kube/namespace/bk_biz_id/([0-9]+)/?$`)
+	deleteNamespaceRegexp = regexp.MustCompile(`^/api/v3/deletemany/kube/namespace/bk_biz_id/([0-9]+)/?$`)
+	findNamespaceRegexp   = regexp.MustCompile(`^/api/v3/findmany/kube/namespace/bk_biz_id/([0-9]+)/?$`)
+
+	createWorkloadRegexp = regexp.MustCompile(`^/api/v3/createmany/kube/workload/[^\s/]+/[0-9]+/?$`)
+	updateWorkloadRegexp = regexp.MustCompile(`^/api/v3/updatemany/kube/workload/[^\s/]+/[0-9]+/?$`)
+	deleteWorkloadRegexp = regexp.MustCompile(`^/api/v3/deletemany/kube/workload/[^\s/]+/[0-9]+/?$`)
+	findWorkloadRegexp   = regexp.MustCompile(`^/api/v3/findmany/kube/workload/[^\s/]+/[0-9]+/?$`)
+
+	findPodPathRegexp = regexp.MustCompile(`^/api/v3/find/kube/pod_path/bk_biz_id/([0-9]+)/?$`)
+	findPodRegexp     = regexp.MustCompile(`^/api/v3/findmany/kube/pod/bk_biz_id/([0-9]+)/?$`)
+
+	findContainerRegexp = regexp.MustCompile(`^/api/v3/findmany/kube/container/bk_biz_id/([0-9]+)/?$`)
+)
+
+// NOCC:golint/fnsize(整体属于 container 操作需要放在一起)
+func (ps *parseStream) kube() *parseStream {
+	if ps.shouldReturn() {
+		return ps
+	}
+
+	if ps.hitRegexp(findKubeAttrsRegexp, http.MethodGet) {
+		if len(ps.RequestCtx.Elements) != 6 {
+			ps.err = fmt.Errorf("get invalid url elements length %d", len(ps.RequestCtx.Elements))
+			return ps
+		}
+
+		ps.Attribute.Resources = []meta.ResourceAttribute{
+			{
+				Basic: meta.Basic{
+					Type:   meta.Business,
+					Action: meta.SkipAction,
+				},
+			},
+		}
+
+		return ps
+	}
+
+	if ps.hitRegexp(createKubeClusterRegexp, http.MethodPost) {
+		if len(ps.RequestCtx.Elements) != 7 {
+			ps.err = fmt.Errorf("get invalid url elements length %d", len(ps.RequestCtx.Elements))
+			return ps
+		}
+
+		bizID, err := strconv.ParseInt(ps.RequestCtx.Elements[6], 10, 64)
+		if err != nil {
+			ps.err = fmt.Errorf("get invalid business set id %s, err: %v", ps.RequestCtx.Elements[6], err)
+			return ps
+		}
+		ps.Attribute.Resources = []meta.ResourceAttribute{
+			{
+				BusinessID: bizID,
+				Basic: meta.Basic{
+					Type:   meta.KubeCluster,
+					Action: meta.Create,
+				},
+			},
+		}
+		return ps
+	}
+
+	if ps.hitRegexp(deleteKubeClustersRegexp, http.MethodDelete) {
+		if len(ps.RequestCtx.Elements) != 7 {
+			ps.err = fmt.Errorf("get invalid url elements length %d", len(ps.RequestCtx.Elements))
+			return ps
+		}
+
+		bizID, err := strconv.ParseInt(ps.RequestCtx.Elements[6], 10, 64)
+		if err != nil {
+			ps.err = fmt.Errorf("get invalid business set id %s, err: %v", ps.RequestCtx.Elements[6], err)
+			return ps
+		}
+		ps.Attribute.Resources = []meta.ResourceAttribute{
+			{
+				BusinessID: bizID,
+				Basic: meta.Basic{
+					Type:   meta.KubeCluster,
+					Action: meta.Delete,
+				},
+			},
+		}
+		return ps
+	}
+
+	if ps.hitRegexp(updatemanyKubeClusterRegexp, http.MethodPut) {
+		if len(ps.RequestCtx.Elements) != 7 {
+			ps.err = fmt.Errorf("get invalid url elements length %d", len(ps.RequestCtx.Elements))
+			return ps
+		}
+
+		bizID, err := strconv.ParseInt(ps.RequestCtx.Elements[6], 10, 64)
+		if err != nil {
+			ps.err = fmt.Errorf("get invalid business set id %s, err: %v", ps.RequestCtx.Elements[6], err)
+			return ps
+		}
+		ps.Attribute.Resources = []meta.ResourceAttribute{
+			{
+				BusinessID: bizID,
+				Basic: meta.Basic{
+					Type:   meta.KubeCluster,
+					Action: meta.UpdateMany,
+				},
+			},
+		}
+		return ps
+	}
+
+	if ps.hitRegexp(findKubeClusterRegexp, http.MethodPost) {
+		if len(ps.RequestCtx.Elements) != 7 {
+			ps.err = fmt.Errorf("get invalid url elements length %d", len(ps.RequestCtx.Elements))
+			return ps
+		}
+
+		bizID, err := strconv.ParseInt(ps.RequestCtx.Elements[6], 10, 64)
+		if err != nil {
+			ps.err = fmt.Errorf("get invalid business set id %s, err: %v", ps.RequestCtx.Elements[6], err)
+			return ps
+		}
+		ps.Attribute.Resources = []meta.ResourceAttribute{
+			{
+				BusinessID: bizID,
+				Basic: meta.Basic{
+					Type:   meta.KubeCluster,
+					Action: meta.FindMany,
+				},
+			},
+		}
+		return ps
+	}
+
+	if ps.hitRegexp(createKubeNodeRegexp, http.MethodPost) {
+		if len(ps.RequestCtx.Elements) != 7 {
+			ps.err = fmt.Errorf("get invalid url elements length %d", len(ps.RequestCtx.Elements))
+			return ps
+		}
+
+		bizID, err := strconv.ParseInt(ps.RequestCtx.Elements[6], 10, 64)
+		if err != nil {
+			ps.err = fmt.Errorf("get invalid business set id %s, err: %v", ps.RequestCtx.Elements[6], err)
+			return ps
+		}
+		ps.Attribute.Resources = []meta.ResourceAttribute{
+			{
+				BusinessID: bizID,
+				Basic: meta.Basic{
+					Type:   meta.KubeNode,
+					Action: meta.CreateMany,
+				},
+			},
+		}
+		return ps
+	}
+
+	if ps.hitRegexp(createKubePodsRegexp, http.MethodPost) {
+
+		option := new(types.CreatePodsOption)
+		body, err := ps.RequestCtx.getRequestBody()
+		if err != nil {
+			ps.err = err
+			return ps
+		}
+		if err := json.Unmarshal(body, option); err != nil {
+			ps.err = fmt.Errorf("unmarshal request body failed, err: %+v", err)
+			return ps
+		}
+
+		for _, data := range option.Data {
+			ps.Attribute.Resources = []meta.ResourceAttribute{
+				{
+					BusinessID: data.BizID,
+					Basic: meta.Basic{
+						Type:   meta.KubePod,
+						Action: meta.CreateMany,
+					},
+				},
+			}
+		}
+
+		return ps
+	}
+
+	if ps.hitRegexp(findKubeNodeRegexp, http.MethodPost) {
+		if len(ps.RequestCtx.Elements) != 7 {
+			ps.err = fmt.Errorf("get invalid url elements length %d", len(ps.RequestCtx.Elements))
+			return ps
+		}
+
+		bizID, err := strconv.ParseInt(ps.RequestCtx.Elements[6], 10, 64)
+		if err != nil {
+			ps.err = fmt.Errorf("get invalid business set id %s, err: %v", ps.RequestCtx.Elements[6], err)
+			return ps
+		}
+		ps.Attribute.Resources = []meta.ResourceAttribute{
+			{
+				BusinessID: bizID,
+				Basic: meta.Basic{
+					Type:   meta.KubeNode,
+					Action: meta.FindMany,
+				},
+			},
+		}
+
+		return ps
+	}
+
+	if ps.hitRegexp(deleteKubeNodeRegexp, http.MethodDelete) {
+		if len(ps.RequestCtx.Elements) != 7 {
+			ps.err = fmt.Errorf("get invalid url elements length %d", len(ps.RequestCtx.Elements))
+			return ps
+		}
+
+		bizID, err := strconv.ParseInt(ps.RequestCtx.Elements[6], 10, 64)
+		if err != nil {
+			ps.err = fmt.Errorf("get invalid business set id %s, err: %v", ps.RequestCtx.Elements[6], err)
+			return ps
+		}
+		ps.Attribute.Resources = []meta.ResourceAttribute{
+			{
+				BusinessID: bizID,
+				Basic: meta.Basic{
+					Type:   meta.KubeNode,
+					Action: meta.DeleteMany,
+				},
+			},
+		}
+
+		return ps
+	}
+
+	if ps.hitRegexp(updatemanyKubeNodeRegexp, http.MethodPut) {
+		if len(ps.RequestCtx.Elements) != 7 {
+			ps.err = fmt.Errorf("get invalid url elements length %d", len(ps.RequestCtx.Elements))
+			return ps
+		}
+
+		bizID, err := strconv.ParseInt(ps.RequestCtx.Elements[6], 10, 64)
+		if err != nil {
+			ps.err = fmt.Errorf("get invalid business set id %s, err: %v", ps.RequestCtx.Elements[6], err)
+			return ps
+		}
+		ps.Attribute.Resources = []meta.ResourceAttribute{
+			{
+				BusinessID: bizID,
+				Basic: meta.Basic{
+					Type:   meta.KubeNode,
+					Action: meta.UpdateMany,
+				},
+			},
+		}
+		return ps
+	}
+
+	if ps.hitRegexp(findKubeTopoPathRegexp, http.MethodPost) {
+		if len(ps.RequestCtx.Elements) != 7 {
+			ps.err = fmt.Errorf("get invalid url elements length %d", len(ps.RequestCtx.Elements))
+			return ps
+		}
+
+		bizID, err := strconv.ParseInt(ps.RequestCtx.Elements[6], 10, 64)
+		if err != nil {
+			ps.err = fmt.Errorf("get invalid business set id %s, err: %v", ps.RequestCtx.Elements[6], err)
+			return ps
+		}
+		ps.Attribute.Resources = []meta.ResourceAttribute{
+			{
+				Basic: meta.Basic{
+					Type:       meta.Business,
+					InstanceID: bizID,
+					Action:     meta.ViewBusinessResource,
+				},
+			},
+		}
+		return ps
+	}
+
+	if ps.hitRegexp(findKubeTopoCountRegexp, http.MethodPost) {
+		if len(ps.RequestCtx.Elements) != 8 {
+			ps.err = fmt.Errorf("get invalid url elements length %d", len(ps.RequestCtx.Elements))
+			return ps
+		}
+		bizID, err := strconv.ParseInt(ps.RequestCtx.Elements[4], 10, 64)
+		if err != nil {
+			ps.err = fmt.Errorf("get invalid business id %s, err: %v", ps.RequestCtx.Elements[4], err)
+			return ps
+		}
+
+		ps.Attribute.Resources = []meta.ResourceAttribute{
+			{
+				Basic: meta.Basic{
+					Type:       meta.Business,
+					InstanceID: bizID,
+					Action:     meta.ViewBusinessResource,
+				},
+			},
+		}
+
+		return ps
+	}
+	if ps.shouldReturn() {
+		return ps
+	}
+
+	if ps.hitPattern(findNodePathForHostPattern, http.MethodPost) {
+		ps.Attribute.Resources = []meta.ResourceAttribute{
+			{
+				Basic: meta.Basic{
+					Type:   meta.KubeNode,
+					Action: meta.Find,
+				},
+			},
+		}
+		return ps
+	}
+
+	if ps.hitRegexp(createNamespaceRegexp, http.MethodPost) {
+		ps.Attribute.Resources = []meta.ResourceAttribute{
+			{
+				Basic: meta.Basic{
+					Type:   meta.KubeNamespace,
+					Action: meta.Create,
+				},
+			},
+		}
+		return ps
+	}
+
+	if ps.hitRegexp(updateNamespaceRegexp, http.MethodPut) {
+		ps.Attribute.Resources = []meta.ResourceAttribute{
+			{
+				Basic: meta.Basic{
+					Type:   meta.KubeNamespace,
+					Action: meta.Update,
+				},
+			},
+		}
+		return ps
+	}
+
+	if ps.hitRegexp(deleteNamespaceRegexp, http.MethodDelete) {
+		ps.Attribute.Resources = []meta.ResourceAttribute{
+			{
+				Basic: meta.Basic{
+					Type:   meta.KubeNamespace,
+					Action: meta.Delete,
+				},
+			},
+		}
+		return ps
+	}
+
+	if ps.hitRegexp(findNamespaceRegexp, http.MethodPost) {
+		ps.Attribute.Resources = []meta.ResourceAttribute{
+			{
+				Basic: meta.Basic{
+					Type:   meta.KubeNamespace,
+					Action: meta.Find,
+				},
+			},
+		}
+		return ps
+	}
+
+	if ps.hitRegexp(createWorkloadRegexp, http.MethodPost) {
+		ps.Attribute.Resources = []meta.ResourceAttribute{
+			{
+				Basic: meta.Basic{
+					Type:   meta.KubeWorkload,
+					Action: meta.Create,
+				},
+			},
+		}
+		return ps
+	}
+
+	if ps.hitRegexp(updateWorkloadRegexp, http.MethodPut) {
+		ps.Attribute.Resources = []meta.ResourceAttribute{
+			{
+				Basic: meta.Basic{
+					Type:   meta.KubeWorkload,
+					Action: meta.Update,
+				},
+			},
+		}
+		return ps
+	}
+
+	if ps.hitRegexp(deleteWorkloadRegexp, http.MethodDelete) {
+		ps.Attribute.Resources = []meta.ResourceAttribute{
+			{
+				Basic: meta.Basic{
+					Type:   meta.KubeWorkload,
+					Action: meta.Delete,
+				},
+			},
+		}
+		return ps
+	}
+
+	if ps.hitRegexp(findWorkloadRegexp, http.MethodPost) {
+		ps.Attribute.Resources = []meta.ResourceAttribute{
+			{
+				Basic: meta.Basic{
+					Type:   meta.KubeWorkload,
+					Action: meta.Find,
+				},
+			},
+		}
+		return ps
+	}
+
+	if ps.hitRegexp(findPodPathRegexp, http.MethodPost) {
+		ps.Attribute.Resources = []meta.ResourceAttribute{
+			{
+				Basic: meta.Basic{
+					Type:   meta.KubePod,
+					Action: meta.Find,
+				},
+			},
+		}
+		return ps
+	}
+
+	if ps.hitRegexp(findPodRegexp, http.MethodPost) {
+		ps.Attribute.Resources = []meta.ResourceAttribute{
+			{
+				Basic: meta.Basic{
+					Type:   meta.KubePod,
+					Action: meta.Find,
+				},
+			},
+		}
+		return ps
+	}
+
+	if ps.hitRegexp(findContainerRegexp, http.MethodPost) {
+		ps.Attribute.Resources = []meta.ResourceAttribute{
+			{
+				Basic: meta.Basic{
+					Type:   meta.KubeContainer,
+					Action: meta.Find,
+				},
+			},
+		}
+		return ps
+	}
+
+	return ps
+}
+
+const (
+	createProjectPattern   = `/api/v3/createmany/project`
+	updateProjectPattern   = `/api/v3/updatemany/project`
+	findProjectPattern     = `/api/v3/findmany/project`
+	deleteProjectPattern   = `/api/v3/deletemany/project`
+	updateProjectIDPattern = `/api/v3/update/project/bk_project_id`
+)
+
+// NOCC:golint/fnsize(project操作需要放到一个函数中)
+func (ps *parseStream) project() *parseStream {
+	if ps.shouldReturn() {
+		return ps
+	}
+
+	if ps.hitPattern(createProjectPattern, http.MethodPost) {
+		ps.Attribute.Resources = []meta.ResourceAttribute{
+			{
+				Basic: meta.Basic{
+					Type:   meta.Project,
+					Action: meta.Create,
+				},
+			},
+		}
+		return ps
+	}
+
+	if ps.hitPattern(updateProjectPattern, http.MethodPut) {
+		idsVal, err := ps.RequestCtx.getValueFromBody("ids")
+		if err != nil {
+			ps.err = err
+			return ps
+		}
+
+		ids := idsVal.Array()
+		if len(ids) == 0 {
+			ps.err = errors.New("ids is not set")
+			return ps
+		}
+
+		for _, id := range ids {
+			idIntVal := id.Int()
+			if idIntVal <= 0 {
+				ps.err = errors.New("invalid id")
+				return ps
+			}
+
+			ps.Attribute.Resources = []meta.ResourceAttribute{
+				{
+					Basic: meta.Basic{
+						Type:       meta.Project,
+						Action:     meta.Update,
+						InstanceID: idIntVal,
+					},
+				},
+			}
+		}
+		return ps
+	}
+
+	if ps.hitPattern(findProjectPattern, http.MethodPost) {
+		ps.Attribute.Resources = []meta.ResourceAttribute{
+			{
+				Basic: meta.Basic{
+					Type:   meta.Project,
+					Action: meta.FindMany,
+				},
+			},
+		}
+
+		return ps
+	}
+
+	if ps.hitPattern(deleteProjectPattern, http.MethodDelete) {
+		idsVal, err := ps.RequestCtx.getValueFromBody("ids")
+		if err != nil {
+			ps.err = err
+			return ps
+		}
+
+		ids := idsVal.Array()
+		if len(ids) == 0 {
+			ps.err = errors.New("ids is not set")
+			return ps
+		}
+
+		for _, id := range ids {
+			idIntVal := id.Int()
+			if idIntVal <= 0 {
+				ps.err = errors.New("invalid id")
+				return ps
+			}
+
+			ps.Attribute.Resources = []meta.ResourceAttribute{
+				{
+					Basic: meta.Basic{
+						Type:       meta.Project,
+						Action:     meta.Delete,
+						InstanceID: idIntVal,
+					},
+				},
+			}
+		}
+		return ps
+	}
+
+	if ps.hitPattern(updateProjectIDPattern, http.MethodPut) {
+		idVal, err := ps.RequestCtx.getValueFromBody("id")
+		if err != nil {
+			ps.err = err
+			return ps
+		}
+
+		id := idVal.Int()
+		if id <= 0 {
+			ps.err = errors.New("invalid id")
+			return ps
+		}
+
+		ps.Attribute.Resources = []meta.ResourceAttribute{
+			{
+				Basic: meta.Basic{
+					Type:       meta.Project,
+					Action:     meta.Update,
+					InstanceID: id,
+				},
+			},
+		}
+
+		return ps
+	}
 	return ps
 }

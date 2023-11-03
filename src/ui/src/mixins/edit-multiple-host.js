@@ -12,6 +12,7 @@
 
 import RouterQuery from '@/router/query'
 import { MENU_BUSINESS } from '@/dictionary/menu-symbol'
+import isEqual from 'lodash/isEqual'
 export default {
   props: {
     properties: {
@@ -21,7 +22,8 @@ export default {
     selection: {
       type: Array,
       required: true
-    }
+    },
+    isContainerHost: Boolean
   },
   data() {
     return {
@@ -38,24 +40,38 @@ export default {
   },
   computed: {
     isGlobalView() {
-      // eslint-disable-next-line prefer-destructuring
       const topRoute = this.$route.matched[0]
       return topRoute ? topRoute.name !== MENU_BUSINESS : true
     },
     saveAuth() {
-      return this.selection.map(({ host, biz, module }) => {
+      const bizHostAuth = (bizId, hostId) => ({
+        type: this.$OPERATION.U_HOST,
+        relation: [bizId, hostId]
+      })
+      const resourceHostAuth = (moduleId, hostId) => ({
+        type: this.$OPERATION.U_RESOURCE_HOST,
+        relation: [moduleId, hostId]
+      })
+
+      return this.selection.map((row) => {
+        if (this.isContainerHost) {
+          // TODO: 判断是否为业务主机返回不同的auth
+          return bizHostAuth(row.bk_biz_id, row.bk_host_id)
+        }
+
+        const { host, biz, module } = row
         const isBizHost = biz[0].default === 0
         if (isBizHost) {
-          return {
-            type: this.$OPERATION.U_HOST,
-            relation: [biz[0].bk_biz_id, host.bk_host_id]
-          }
+          return bizHostAuth(biz[0].bk_biz_id, host.bk_host_id)
         }
-        return {
-          type: this.$OPERATION.U_RESOURCE_HOST,
-          relation: [module[0].bk_module_id, host.bk_host_id]
-        }
+        return resourceHostAuth(module[0].bk_module_id, host.bk_host_id)
       })
+    },
+    hostIds() {
+      if (this.isContainerHost) {
+        return this.selection.map(row => row.bk_host_id).join(',')
+      }
+      return this.selection.map(row => row.host.bk_host_id).join(',')
     }
   },
   methods: {
@@ -80,7 +96,7 @@ export default {
         await this.$store.dispatch('hostUpdate/updateHost', {
           params: {
             ...changedValues,
-            bk_host_id: this.selection.map(row => row.host.bk_host_id).join(',')
+            bk_host_id: this.hostIds
           }
         })
         this.slider.show = false
@@ -97,21 +113,13 @@ export default {
     },
     handleSliderBeforeClose() {
       const $form = this.$refs.multipleForm
-      if (Object.keys($form.changedValues).length) {
-        return new Promise((resolve) => {
-          this.$bkInfo({
-            title: this.$t('确认退出'),
-            subTitle: this.$t('退出会导致未保存信息丢失'),
-            extCls: 'bk-dialog-sub-header-center',
-            confirmFn: () => {
-              this.slider.show = false
-              this.slider.component = null
-              resolve(true)
-            },
-            cancelFn: () => {
-              resolve(false)
-            }
-          })
+      const { values, refrenceValues } = $form
+      const changedValues =  !isEqual(values, refrenceValues)
+      if (changedValues) {
+        $form.setChanged(true)
+        return $form.beforeClose(() => {
+          this.slider.component = null
+          this.slider.show = false
         })
       }
       this.slider.component = null

@@ -12,12 +12,17 @@
 
 package metadata
 
-import "configcenter/src/common/watch"
-
-// SearchHostWithInnerIPOption TODO
+// SearchHostWithIP 通过IP查找host details请求参数
 type SearchHostWithInnerIPOption struct {
 	InnerIP string `json:"bk_host_innerip"`
 	CloudID int64  `json:"bk_cloud_id"`
+	// only return these fields in hosts.
+	Fields []string `json:"fields"`
+}
+
+// SearchHostWithAgentID 通过AgentID查找host details请求参数
+type SearchHostWithAgentID struct {
+	AgentID string `json:"bk_agent_id"`
 	// only return these fields in hosts.
 	Fields []string `json:"fields"`
 }
@@ -55,10 +60,4 @@ type ListHostWithPage struct {
 	// sort field is not used.
 	// max page limit is 1000
 	Page BasePage `json:"page"`
-}
-
-// WatchEventResp TODO
-type WatchEventResp struct {
-	BaseResp `json:",inline"`
-	Data     *watch.WatchResp `json:"data"`
 }

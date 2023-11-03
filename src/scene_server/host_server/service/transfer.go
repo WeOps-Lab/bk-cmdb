@@ -54,7 +54,7 @@ func (s *Service) TransferHostWithAutoClearServiceInstance(ctx *rest.Contexts) {
 	bizIDStr := ctx.Request.PathParameter(common.BKAppIDField)
 	bizID, err := strconv.ParseInt(bizIDStr, 10, 64)
 	if err != nil {
-		blog.V(7).Infof("parse bizID from url failed, bizID: %s, err: %+v, rid: %s", bizIDStr, ctx.Kit.Rid)
+		blog.V(7).Infof("parse bizID from url failed, bizID: %s, err: %+v, rid: %s", bizIDStr, err, ctx.Kit.Rid)
 		ctx.RespAutoError(ctx.Kit.CCError.Errorf(common.CCErrCommParamsNeedInt, common.BKAppIDField))
 		return
 	}
@@ -90,17 +90,17 @@ func (s *Service) TransferHostWithAutoClearServiceInstance(ctx *rest.Contexts) {
 
 	transToInnerOpt, transToNormalPlans := s.parseTransferPlans(bizID, option.IsRemoveFromAll,
 		len(option.RemoveFromModules) == 0, transferPlans, svcInstMap, option.Options.HostApplyTransPropertyRule.Changed)
-	transferResult := make([]metadata.HostTransferResult, 0)
+
 	txnErr := s.Engine.CoreAPI.CoreService().Txn().AutoRunTxn(ctx.Kit.Ctx, ctx.Kit.Header, func() error {
 		return s.transferHostWithAutoClearServiceInstance(ctx.Kit, bizID, option, transToInnerOpt, transToNormalPlans,
 			svcInstMap, hostIDs)
 	})
 
 	if txnErr != nil {
-		ctx.RespEntityWithError(transferResult, txnErr)
+		ctx.RespAutoError(txnErr)
 		return
 	}
-	ctx.RespEntity(transferResult)
+	ctx.RespEntity(nil)
 	return
 }
 
@@ -827,7 +827,7 @@ func (s *Service) TransferHostWithAutoClearServiceInstancePreview(ctx *rest.Cont
 	bizIDStr := ctx.Request.PathParameter(common.BKAppIDField)
 	bizID, err := strconv.ParseInt(bizIDStr, 10, 64)
 	if err != nil {
-		blog.V(7).Infof("parse bizID from url failed, bizID: %s, err: %+v, rid: %s", bizIDStr, ctx.Kit.Rid)
+		blog.V(7).Infof("parse bizID from url failed, bizID: %s, err: %+v, rid: %s", bizIDStr, err, ctx.Kit.Rid)
 		ctx.RespAutoError(ctx.Kit.CCError.Errorf(common.CCErrCommParamsNeedInt, common.BKAppIDField))
 		return
 	}

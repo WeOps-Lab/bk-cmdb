@@ -19,7 +19,7 @@
     }">
     <div class="drag-icon" v-if="dragIcon"></div>
     <bk-icon class="group-collapse-icon" type="down-shape" />
-    <span class="group-title-text">{{title}}</span>
+    <p class="group-title-text" v-bk-overflow-tips>{{title}}</p>
     <bk-dropdown-menu
       @click.native.stop
       v-if="dropdownMenu"
@@ -69,6 +69,7 @@
         </ul>
       </template>
     </bk-dropdown-menu>
+    <bk-tag v-if="isNewClassify" theme="success" radius="2px">{{$t('新的')}}</bk-tag>
   </div>
 </template>
 
@@ -118,6 +119,12 @@
       commands: {
         type: Array,
         default: () => []
+      },
+
+      // 是否是新建分组
+      isNewClassify: {
+        type: Boolean,
+        default: false
       }
     },
     setup(props) {
@@ -183,7 +190,11 @@ $titleHeight: 26px;
   }
 
   .group-title-text {
+    max-width: 150px;
     margin-right: 5px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
   }
 
   .group-dropdown-menu {

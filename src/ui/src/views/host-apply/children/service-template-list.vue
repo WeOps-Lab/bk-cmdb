@@ -11,9 +11,9 @@
 -->
 
 <template>
-  <div class="service-template-list" :style="{ '--height': `${$APP.height - 160 - 44}px` }" ref="$templateList">
+  <div class="service-template-list" :style="{ '--height': `${$APP.height - 160 - 44}px` }" ref="templateListEl">
     <div :class="['template-item', { selected: item.id === current.id, disabled: isNodeDisabled(item) }]"
-      :title="isNodeDisabled(item) ? $t('暂无策略') : ''"
+      :title="isNodeDisabled(item) ? $t('暂无策略') : item.name"
       v-for="item in displayList" :key="item.id"
       @click="handleClickItem(item)">
       <bk-checkbox
@@ -27,9 +27,9 @@
         <i class="bk-cc-icon icon-cc-selected"></i>
       </span>
     </div>
-    <bk-exception class="empty" :type="isSearch ? 'search-empty' : 'empty'" scene="part" v-if="!displayList.length">
-      <span>{{$t('无数据')}}</span>
-    </bk-exception>
+    <cmdb-data-empty v-if="!displayList.length" slot="empty"
+      :stuff="dataEmpty"
+      @clear="handleClearFilter"></cmdb-data-empty>
   </div>
 </template>
 <script>
@@ -38,7 +38,7 @@
   import Bus from '@/utils/bus'
   import router from '@/router/index.js'
   import { sortTopoTree } from '@/utils/tools.js'
-  import serviceTemplateService from '@/services/service-template/index.js'
+  import serviceTemplateService from '@/service/service-template/index.js'
 
   export default defineComponent({
     props: {
@@ -56,16 +56,22 @@
       const bizId = store.getters['objectBiz/bizId']
       const getModelById = store.getters['objectModelClassify/getModelById']
 
-      const $templateList = ref(null)
+      const templateListEl = ref(null)
 
       const state = reactive({
         fullList: [],
         displayList: [],
         modelIcon: getModelById('module').bk_obj_name[0],
         current: {},
-        isSearch: false
       })
       const checked = reactive({})
+
+      const dataEmpty = ref({
+        type: 'search',
+        payload: {
+          defaultText: ''
+        }
+      })
 
       const targetId = computed(() => Number(router.app.$route.query.id))
 
@@ -145,7 +151,7 @@
       const isNodeDisabled = node => isDel.value && !node.host_apply_rule_count
 
       const scrollSelectedIntoView = () => {
-        $templateList.value?.querySelector('.template-item.selected')?.scrollIntoView()
+        templateListEl.value?.querySelector('.template-item.selected')?.scrollIntoView(false)
       }
 
       onActivated(() => {
@@ -159,7 +165,6 @@
       })
 
       const handleSearch = async (condition) => {
-        state.isSearch = true
         try {
           if (condition.query_filter.rules.length) {
             const keywordRuleIndex = condition.query_filter.rules.findIndex(item => item.field === 'keyword')
@@ -199,7 +204,6 @@
       const filterList = ({ remote: remoteData, keyword, clear }) => {
         if (clear) {
           state.displayList = state.fullList.slice()
-          state.isSearch = false
           return
         }
 
@@ -220,6 +224,11 @@
         }
       }
 
+      const handleClearFilter = () => {
+        filterList({ clear: true })
+        Bus.$emit('host-apply-clear-search', [])
+      }
+
       Bus.$on('host-apply-template-search', handleSearch)
 
       onBeforeUnmount(() => {
@@ -238,7 +247,9 @@
         removeChecked,
         updateNodeStatus,
         handleClickItem,
-        $templateList
+        templateListEl,
+        dataEmpty,
+        handleClearFilter
       }
     }
   })
@@ -267,7 +278,7 @@
       cursor: pointer;
 
       &:hover {
-        background: #f1f7ff;
+        background: #F0F1F5;
       }
 
       &.selected {

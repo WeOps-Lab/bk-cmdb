@@ -47,7 +47,9 @@ func (ps *parseStream) topologyLatest() *parseStream {
 		objectAttributeGroupLatest().
 		objectAttributeLatest().
 		mainlineLatest().
-		setTemplate()
+		setTemplate().
+		modelQuote().
+		fieldTemplate()
 
 	return ps
 }
@@ -1735,10 +1737,12 @@ func (ps *parseStream) objectInstanceLatest() *parseStream {
 }
 
 const (
-	createObjectLatestPattern            = "/api/v3/create/object"
-	createManyObjectLatestPattern        = "/api/v3/createmany/object/by_import"
-	createObjectBatchLatestPattern       = "/api/v3/createmany/object"
-	findObjectsLatestPattern             = "/api/v3/find/object"
+	createObjectLatestPattern      = "/api/v3/create/object"
+	createManyObjectLatestPattern  = "/api/v3/createmany/object/by_import"
+	createObjectBatchLatestPattern = "/api/v3/createmany/object"
+	findObjectsLatestPattern       = "/api/v3/find/object"
+	findObjectsModelLatestPattern  = "/api/v3/find/object/model"
+
 	findObjectBatchLatestPattern         = "/api/v3/findmany/object"
 	findObjectWithTotalInfoLatestPattern = "/api/v3/findmany/object/total/info"
 	findObjectTopologyLatestPattern      = "/api/v3/find/objecttopology"
@@ -1903,6 +1907,26 @@ func (ps *parseStream) objectLatest() *parseStream {
 
 	// get object operation.
 	if ps.hitPattern(findObjectsLatestPattern, http.MethodPost) {
+		bizID, err := ps.RequestCtx.getBizIDFromBody()
+		if err != nil {
+			ps.err = err
+			return ps
+		}
+
+		ps.Attribute.Resources = []meta.ResourceAttribute{
+			{
+				BusinessID: bizID,
+				Basic: meta.Basic{
+					Type:   meta.Model,
+					Action: meta.FindMany,
+				},
+			},
+		}
+		return ps
+	}
+
+	// get object model operation.
+	if ps.hitPattern(findObjectsModelLatestPattern, http.MethodPost) {
 		bizID, err := ps.RequestCtx.getBizIDFromBody()
 		if err != nil {
 			ps.err = err
@@ -2365,8 +2389,10 @@ func (ps *parseStream) objectAttributeGroupLatest() *parseStream {
 }
 
 const (
-	createObjectAttributeLatestPattern   = "/api/v3/create/objectattr"
-	findObjectAttributeLatestPattern     = "/api/v3/find/objectattr"
+	createObjectAttributeLatestPattern  = "/api/v3/create/objectattr"
+	findObjectAttributeLatestPattern    = "/api/v3/find/objectattr"
+	findObjectAttributeForLatestPattern = "/api/v3/find/objectattr/web"
+
 	findHostObjectAttributeLatestPattern = "/api/v3/find/objectattr/host"
 )
 
@@ -2433,7 +2459,13 @@ func (ps *parseStream) objectAttributeLatest() *parseStream {
 			return ps
 		}
 
-		attr, err := ps.getModelAttribute(mapstr.MapStr{common.BKFieldID: attrID})
+		bizID, err := ps.RequestCtx.getBizIDFromBody()
+		if err != nil {
+			ps.err = err
+			return ps
+		}
+
+		attr, err := ps.getModelAttribute(bizID, mapstr.MapStr{common.BKFieldID: attrID})
 		if err != nil {
 			ps.err = fmt.Errorf("delete object attribute, but fetch attribute by %v failed %v", mapstr.MapStr{common.BKFieldID: attrID}, err)
 			return ps
@@ -2478,7 +2510,7 @@ func (ps *parseStream) objectAttributeLatest() *parseStream {
 			return ps
 		}
 
-		attr, err := ps.getModelAttribute(mapstr.MapStr{common.BKFieldID: attrID})
+		attr, err := ps.getModelAttribute(0, mapstr.MapStr{common.BKFieldID: attrID})
 		if err != nil {
 			ps.err = fmt.Errorf("delete object attribute, but fetch attribute by %v failed %v", mapstr.MapStr{common.BKFieldID: attrID}, err)
 			return ps
@@ -2523,7 +2555,13 @@ func (ps *parseStream) objectAttributeLatest() *parseStream {
 			return ps
 		}
 
-		attr, err := ps.getModelAttribute(mapstr.MapStr{common.BKFieldID: attrID})
+		bizID, err := ps.RequestCtx.getBizIDFromBody()
+		if err != nil {
+			ps.err = err
+			return ps
+		}
+
+		attr, err := ps.getModelAttribute(bizID, mapstr.MapStr{common.BKFieldID: attrID})
 		if err != nil {
 			ps.err = fmt.Errorf("delete object attribute, but fetch attribute by %v failed %v", mapstr.MapStr{common.BKFieldID: attrID}, err)
 			return ps
@@ -2592,6 +2630,42 @@ func (ps *parseStream) objectAttributeLatest() *parseStream {
 		return ps
 	}
 
+	// get object's attribute operation.
+	if ps.hitPattern(findObjectAttributeForLatestPattern, http.MethodPost) {
+		val, err := ps.RequestCtx.getValueFromBody(common.BKObjIDField)
+		if err != nil {
+			ps.err = err
+			return ps
+		}
+		modelCond := val.Value()
+		models, err := ps.searchModels(mapstr.MapStr{common.BKObjIDField: modelCond})
+		if err != nil {
+			ps.err = err
+			return ps
+		}
+
+		bizID, err := ps.RequestCtx.getBizIDFromBody()
+		if err != nil {
+			ps.err = err
+			return ps
+		}
+
+		for _, model := range models {
+			ps.Attribute.Resources = append(ps.Attribute.Resources,
+				meta.ResourceAttribute{
+					// 注意：业务ID是否为0表示两种不同的操作
+					// case 0: 读取模型的公有属性
+					// case ~0: 读取业务私有属性+公有属性
+					BusinessID: bizID,
+					Basic: meta.Basic{
+						Type:   meta.ModelAttribute,
+						Action: meta.FindMany,
+					},
+					Layers: []meta.Item{{Type: meta.Model, InstanceID: model.ID}},
+				})
+		}
+		return ps
+	}
 	if ps.hitPattern(findHostObjectAttributeLatestPattern, http.MethodPost) {
 		model, err := ps.getOneModel(mapstr.MapStr{common.BKObjIDField: common.BKInnerObjIDHost})
 		if err != nil {

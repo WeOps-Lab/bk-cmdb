@@ -63,14 +63,14 @@ var (
 	// DynamicGroupConditionTypes all condition object types of dynamic group.
 	DynamicGroupConditionTypes = map[string]map[string]string{
 		// host dynamic group.
-		common.BKInnerObjIDHost: map[string]string{
+		common.BKInnerObjIDHost: {
 			common.BKInnerObjIDSet:    common.BKInnerObjIDSet,
 			common.BKInnerObjIDModule: common.BKInnerObjIDModule,
 			common.BKInnerObjIDHost:   common.BKInnerObjIDHost,
 		},
 
 		// set dynamic group.
-		common.BKInnerObjIDSet: map[string]string{
+		common.BKInnerObjIDSet: {
 			common.BKInnerObjIDSet: common.BKInnerObjIDSet,
 		},
 	}
@@ -134,7 +134,8 @@ func (c *DynamicGroupCondition) Validate(attributeMap map[string]string) error {
 		}
 	case DynamicGroupOperatorLIKE:
 		if attrType != stringType {
-			return fmt.Errorf("operator %s only support string value, not support attribute type, %s", c.Operator, attributeType)
+			return fmt.Errorf("operator %s only support string value, not support attribute type, %s", c.Operator,
+				attributeType)
 		}
 
 		return validAttributeValueType(attrType, c.Value)
@@ -170,10 +171,11 @@ const (
 
 func getAttributeType(attributeType string) (string, error) {
 	switch attributeType {
-	case common.FieldTypeSingleChar, common.FieldTypeLongChar, common.FieldTypeEnum, common.FieldTypeDate, common.FieldTypeTime,
-		common.FieldTypeTimeZone, common.FieldTypeUser, common.FieldTypeList:
+	case common.FieldTypeSingleChar, common.FieldTypeLongChar, common.FieldTypeEnum, common.FieldTypeDate,
+		common.FieldTypeEnumMulti, common.FieldTypeTime, common.FieldTypeTimeZone, common.FieldTypeUser,
+		common.FieldTypeList:
 		return stringType, nil
-	case common.FieldTypeInt, common.FieldTypeFloat, common.FieldTypeOrganization:
+	case common.FieldTypeInt, common.FieldTypeFloat, common.FieldTypeOrganization, common.FieldTypeEnumQuote:
 		return numericType, nil
 	case common.FieldTypeBool:
 		return boolType, nil

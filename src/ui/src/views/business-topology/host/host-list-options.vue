@@ -14,7 +14,8 @@
   <div class="options-layout clearfix">
     <div class="options options-left fl">
       <cmdb-auth
-        class="option"
+        v-show="!isContainerHost"
+        class="option mr10"
         v-bk-tooltips="{
           disabled: isNormalModuleNode,
           content: $t('仅能在业务模块下新增')
@@ -26,12 +27,16 @@
           {{$t('新增')}}
         </bk-button>
       </cmdb-auth>
-      <bk-button class="ml10" v-test-id="'edit'"
+
+      <bk-button v-test-id="'edit'"
         :disabled="!hasSelection"
         @click="handleMultipleEdit">
         {{$t('编辑')}}
       </bk-button>
-      <bk-dropdown-menu class="option ml10" trigger="click"
+
+      <bk-dropdown-menu
+        v-show="!isContainerHost"
+        class="option ml10" trigger="click"
         font-size="medium"
         :disabled="!hasSelection"
         @show="isTransferMenuOpen = true"
@@ -74,6 +79,7 @@
           </li>
         </ul>
       </bk-dropdown-menu>
+
       <bk-dropdown-menu class="option ml10" trigger="click"
         v-show="isNormalNode"
         font-size="medium"
@@ -97,6 +103,7 @@
           </cmdb-auth>
         </ul>
       </bk-dropdown-menu>
+
       <bk-dropdown-menu class="option ml10" trigger="click"
         v-show="isNormalModuleNode"
         font-size="medium"
@@ -140,10 +147,15 @@
             {{$t('导出选中')}}
           </li>
           <li :class="['bk-dropdown-item', { disabled: !count }]" @click="handleBatchExport($event)"
+            v-show="!isContainerHost"
             v-test-id="'batchExport'">
             {{$t('导出全部')}}
           </li>
-          <cmdb-auth tag="li" class="bk-dropdown-item with-auth" v-test-id="'importUpdate'"
+          <cmdb-auth
+            v-show="!isContainerHost"
+            tag="li"
+            class="bk-dropdown-item with-auth"
+            v-test-id="'importUpdate'"
             :auth="{ type: $OPERATION.U_HOST, relation: [bizId] }">
             <span href="javascript:void(0)"
               slot-scope="{ disabled }"
@@ -158,16 +170,19 @@
     <div class="options options-right">
       <filter-fast-search class="option-fast-search" v-test-id></filter-fast-search>
       <filter-collection class="option-collection ml10" v-test-id></filter-collection>
-      <icon-button class="option-filter ml10" v-test-id="'advancedSearch'"
+      <icon-button :class="['option-filter', 'ml10', { active: hasCondition }]" v-test-id="'advancedSearch'"
         icon="icon-cc-funnel" v-bk-tooltips.top="$t('高级筛选')"
         @click="handleSetFilters">
       </icon-button>
     </div>
+
     <edit-multiple-host ref="editMultipleHost" v-test-id
       :properties="hostProperties"
-      :selection="$parent.table.selection">
+      :selection="$parent.table.selection"
+      :is-container-host="isContainerHost">
     </edit-multiple-host>
-    <cmdb-dialog :mask-close="false" v-model="dialog.show" v-bind="dialog.props" :height="650">
+
+    <cmdb-dialog :mask-close="false" v-model="dialog.show" v-bind="dialog.props" :height="750">
       <component
         :is="dialog.component"
         v-bind="dialog.componentProps"
@@ -198,12 +213,14 @@
     MENU_BUSINESS_TRANSFER_HOST
   } from '@/dictionary/menu-symbol'
   import FilterForm from '@/components/filters/filter-form.js'
-  import FilterCollection from '@/components/filters/filter-collection'
-  import FilterFastSearch from '@/components/filters/filter-fast-search'
+  import FilterCollection from '@/components/filters/filter-collection.vue'
+  import FilterFastSearch from '@/components/filters/filter-fast-search.vue'
   import FilterStore from '@/components/filters/store'
   import FilterUtils from '@/components/filters/utils'
   import { update as updateHost } from '@/service/host/import'
   import RouterQuery from '@/router/query'
+  import { isUseComplexValueType } from '@/utils/tools'
+
   export default {
     components: {
       FilterCollection,
@@ -221,7 +238,7 @@
         dialog: {
           show: false,
           props: {
-            width: 1100
+            width: 1280
           },
           component: null,
           componentProps: {}
@@ -245,6 +262,12 @@
       hostProperties() {
         return FilterStore.getModelProperties('host')
       },
+      isContainerNode() {
+        return this.$parent.isContainerNode
+      },
+      isContainerHost() {
+        return this.$parent.isContainerHost
+      },
       count() {
         return this.$parent.table.pagination.count
       },
@@ -261,12 +284,20 @@
         return this.isNormalNode && this.selectedNode.data.bk_obj_id === 'module'
       },
       isIdleModule() {
+        if (this.isContainerHost) {
+          return false
+        }
+
         return this.selection.every((data) => {
           const modules = data.module
           return modules.every(module => module.default === 1)
         })
       },
       isIdleSetModules() {
+        if (this.isContainerHost) {
+          return false
+        }
+
         return this.selection.every(data => data.module.every(module => module.default >= 1))
       },
       removeAvailable() {
@@ -280,15 +311,18 @@
           id: this.IPWithCloudSymbol,
           bk_obj_id: 'host',
           bk_property_id: this.IPWithCloudSymbol,
-          bk_property_name: `${this.$t('云区域')}ID:IP`,
+          bk_property_name: `${this.$t('管控区域')}ID:IP`,
           bk_property_type: 'singlechar'
         })
-        const clipboardList = FilterStore.header.slice()
+        const clipboardList = this.$parent.tableHeader.slice()
         clipboardList.splice(1, 0, IPWithCloud)
         return clipboardList
       },
       tableHeaderPropertyIdList() {
         return this.$parent.tableHeader.map(item => item.bk_property_id)
+      },
+      hasCondition() {
+        return FilterStore.hasCondition
       }
     },
     methods: {
@@ -320,7 +354,7 @@
           query: {
             sourceModel: this.selectedNode.data.bk_obj_id,
             sourceId: this.selectedNode.data.bk_inst_id,
-            resources: this.selection.map(item => item.host.bk_host_id).join(','),
+            resources: this.getSelectedHostIds(this.selection)?.join(','),
             node: this.selectedNode.id
           },
           history: true
@@ -343,7 +377,7 @@
             const { fields, exportRelation  } = state
             const params = {
               export_custom_fields: fields.value.map(property => property.bk_property_id),
-              bk_host_ids: this.selection.map(({ host }) => host.bk_host_id),
+              bk_host_ids: this.getSelectedHostIds(this.selection),
               bk_biz_id: this.bizId,
               export_condition: {
                 page: {
@@ -379,7 +413,8 @@
           defaultSelectedFields: this.tableHeaderPropertyIdList,
           count: this.count,
           submit: (state, task) => {
-            const { fields, exportRelation  } = state
+            const { fields, exportRelation } = state
+            // TODO: 如何兼容容器拓扑
             const exportCondition = this.$parent.getParams()
             const params = {
               export_custom_fields: fields.value.map(property => property.bk_property_id),
@@ -428,9 +463,15 @@
         showImport()
       },
       handleCopy(property) {
-        const copyText = this.selection.map((data) => {
+        const copyText = this.selection.map((data, index) => {
           const modelId = property.bk_obj_id
           const modelData = data[modelId]
+
+          if (isUseComplexValueType(property)) {
+            const value = this.$parent?.$refs?.[`table-cell-property-value-${property.bk_property_id}`]?.[index]?.getCopyValue()
+            return value
+          }
+
           if (property.id === this.IPWithCloudSymbol) {
             const cloud = this.$tools.getPropertyCopyValue(modelData.bk_cloud_id, 'foreignkey')
             const ip = this.$tools.getPropertyCopyValue(modelData.bk_host_innerip, 'singlechar')
@@ -461,7 +502,7 @@
           sourceModel: this.selectedNode.data.bk_obj_id,
           sourceId: this.selectedNode.data.bk_inst_id,
           targetModules: this.selectedNode.data.bk_inst_id,
-          resources: selected.map(item => item.host.bk_host_id).join(','),
+          resources: this.getSelectedHostIds(selected)?.join(','),
           node: this.selectedNode.id
         }
         this.$routerActions.redirect({
@@ -478,6 +519,9 @@
       },
       handleSetFilters() {
         FilterForm.show()
+      },
+      getSelectedHostIds(selected) {
+        return FilterUtils.getSelectedHostIds(selected, this.isContainerHost)
       }
     }
   }
@@ -506,7 +550,8 @@
         .option-collection,
         .option-filter {
             flex: 32px 0 0;
-            &:hover {
+            &:hover,
+            .active {
                 color: $primaryColor;
             }
         }

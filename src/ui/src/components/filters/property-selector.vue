@@ -35,13 +35,22 @@
             v-for="property in group.children"
             :key="property.bk_property_id">
             <bk-checkbox class="property-checkbox"
+              :disabled="disabledProperties[group.id].includes(property.bk_property_id)"
               :checked="isChecked(property)"
               @change="handleToggleProperty(property, ...arguments)">
-              {{property.bk_property_name}}
+              <span v-bk-tooltips.top-start="{
+                disabled: !disabledProperties[group.id].includes(property.bk_property_id),
+                content: $t('该字段不支持搜索')
+              }">
+                {{property.bk_property_name}}
+              </span>
             </bk-checkbox>
           </li>
         </ul>
       </div>
+      <cmdb-data-empty v-if="renderGroups.length === 0" class="empty-content" slot="empty"
+        :stuff="dataEmpty"
+        @clear="handleClearFilter"></cmdb-data-empty>
     </section>
     <footer class="footer" slot="footer">
       <i18n class="selected-count"
@@ -62,6 +71,7 @@
   import { mapGetters } from 'vuex'
   import FilterStore from './store'
   import throttle from 'lodash.throttle'
+  import { PROPERTY_TYPES } from '@/dictionary/property-constants'
   export default {
     data() {
       return {
@@ -69,19 +79,62 @@
         isShow: false,
         selected: [...FilterStore.selected],
         throttleFilter: throttle(this.handleFilter, 500, { leading: false }),
-        renderGroups: []
+        renderGroups: [],
+        dataEmpty: {
+          type: 'empty',
+          payload: {
+            defaultText: this.$t('暂无数据')
+          }
+        }
       }
     },
     computed: {
       ...mapGetters('objectModelClassify', ['getModelById']),
       propertyMap() {
         let modelPropertyMap = { ...FilterStore.modelPropertyMap }
-        const ignoreHostProperties = ['bk_host_innerip', 'bk_host_outerip', '__bk_host_topology__']
-        // eslint-disable-next-line max-len
-        modelPropertyMap.host = modelPropertyMap.host.filter(property => !ignoreHostProperties.includes(property.bk_property_id))
+
+        const ignoreHostProperties = ['bk_host_innerip', 'bk_host_outerip', '__bk_host_topology__', 'bk_host_innerip_v6', 'bk_host_outerip_v6']
+        modelPropertyMap.host = modelPropertyMap.host
+          .filter(property => !ignoreHostProperties.includes(property.bk_property_id))
+
+        // 暂时不支持node对象map类型的字段
+        modelPropertyMap.node = modelPropertyMap.node
+          ?.filter(property => !['map'].includes(property.bk_property_type))
+
+        const getPropertyMapExcludeBy = (exclude = []) => {
+          const excludes = !Array.isArray(exclude) ? [exclude] : exclude
+          const propertyMap = []
+          for (const [key, value] of Object.entries(modelPropertyMap)) {
+            if (!excludes.includes(key)) {
+              propertyMap[key] = value
+            }
+          }
+          return propertyMap
+        }
+
+        // 资源-主机视图
         if (!FilterStore.bizId) {
+          // 非已分配
+          if (!FilterStore.isResourceAssigned) {
+            return getPropertyMapExcludeBy('node')
+          }
           return modelPropertyMap
         }
+
+        // 当前处于业务节点，使用除业务外全量的字段(包括node)
+        if (FilterStore.isBizNode) {
+          return getPropertyMapExcludeBy('biz')
+        }
+
+        // 容器拓扑
+        if (FilterStore.isContainerTopo) {
+          return {
+            host: modelPropertyMap.host || [],
+            node: modelPropertyMap.node || [],
+          }
+        }
+
+        // 业务拓扑主机，不需要业务和Node模型字段
         modelPropertyMap = {
           host: modelPropertyMap.host || [],
           module: modelPropertyMap.module || [],
@@ -90,7 +143,7 @@
         return modelPropertyMap
       },
       groups() {
-        const sequence = ['host', 'module', 'set', 'biz']
+        const sequence = ['host', 'module', 'set', 'node', 'biz']
         return Object.keys(this.propertyMap).map((modelId) => {
           const model = this.getModelById(modelId) || {}
           return {
@@ -100,12 +153,22 @@
           }
         })
           .sort((groupA, groupB) => sequence.indexOf(groupA.id) - sequence.indexOf(groupB.id))
+      },
+      disabledProperties() {
+        const disabledPropertyMap = {}
+        this.groups.forEach((group) => {
+          disabledPropertyMap[group.id] = group.children
+            .filter(item => item.bk_property_type === PROPERTY_TYPES.INNER_TABLE)
+            .map(item => item.bk_property_id)
+        })
+        return disabledPropertyMap
       }
     },
     watch: {
       filter: {
         immediate: true,
-        handler() {
+        handler(value) {
+          this.dataEmpty.type = value ? 'search' : 'empty'
           this.throttleFilter()
         }
       }
@@ -156,6 +219,9 @@
       },
       close() {
         this.isShow = false
+      },
+      handleClearFilter() {
+        this.filter = ''
       }
     }
   }
@@ -180,6 +246,13 @@
         margin: 0 -24px -24px 0;
         height: 350px;
         @include scrollbar-y;
+        position: relative;
+        .empty-content{
+            position: absolute;
+            top:50%;
+            left:50%;
+            transform: translate(-50%,-50%);
+        }
     }
     .group {
         margin-top: 15px;

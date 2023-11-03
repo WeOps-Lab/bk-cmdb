@@ -96,7 +96,8 @@ type AuditQueryCondition struct {
 // Validate is a AuditQueryCondition validator to validate user resource_name condition whether exist at the same time
 func (a *AuditQueryCondition) Validate() error {
 	if (len(a.User) != 0 || len(a.ResourceName) != 0) && len(a.Condition) != 0 {
-		return errors.New(common.CCErrCommParamsInvalid, "condition, user and resource_name cannot exist at the same time")
+		return errors.New(common.CCErrCommParamsInvalid,
+			"condition, user and resource_name cannot exist at the same time")
 	}
 	return nil
 }
@@ -141,10 +142,10 @@ func (input *InstAuditQueryInput) Validate() errors.RawErrorInfo {
 		return errors.RawErrorInfo{}
 	}
 
-	// 前端目前只允许查看主机、业务、自定义模型的变更记录，因此在此限制objid不为host和biz时报错
-	// front-end only allow to see change record of host, biz, custom object
+	// 前端目前只允许查看主机、业务、业务集、项目、自定义模型的变更记录，因此在此限制objid不为上述模型时报错
+	// front-end only allow to see change record of host, biz, biz set, project, custom object
 	if input.Condition.ObjID != common.BKInnerObjIDApp && input.Condition.ObjID != common.BKInnerObjIDHost &&
-		input.Condition.ObjID != common.BKInnerObjIDBizSet {
+		input.Condition.ObjID != common.BKInnerObjIDBizSet && input.Condition.ObjID != common.BKInnerObjIDProject {
 		return errors.RawErrorInfo{
 			ErrCode: common.CCErrCommParamsInvalid,
 			Args:    []interface{}{common.BKObjIDField},
@@ -201,40 +202,44 @@ type AuditLog struct {
 	AppCode string `json:"code,omitempty" bson:"code,omitempty"`
 	// RequestID is the request id of the request
 	RequestID string `json:"rid,omitempty" bson:"rid,omitempty"`
+	// todo ExtendResourceName for the temporary solution of ipv6
+	ExtendResourceName string `json:"extend_resource_name" bson:"extend_resource_name"`
 }
 
 type bsonAuditLog struct {
-	ID              int64           `json:"id" bson:"id"`
-	AuditType       AuditType       `json:"audit_type" bson:"audit_type"`
-	SupplierAccount string          `json:"bk_supplier_account" bson:"bk_supplier_account"`
-	User            string          `json:"user" bson:"user"`
-	ResourceType    ResourceType    `json:"resource_type" bson:"resource_type"`
-	Action          ActionType      `json:"action" bson:"action"`
-	OperateFrom     OperateFromType `json:"operate_from" bson:"operate_from"`
-	OperationTime   Time            `json:"operation_time" bson:"operation_time"`
-	OperationDetail bson.Raw        `json:"operation_detail" bson:"operation_detail"`
-	BusinessID      int64           `json:"bk_biz_id" bson:"bk_biz_id"`
-	ResourceID      interface{}     `json:"resource_id" bson:"resource_id"`
-	ResourceName    string          `json:"resource_name" bson:"resource_name"`
-	AppCode         string          `json:"code" bson:"code"`
-	RequestID       string          `json:"rid" bson:"rid"`
+	ID                 int64           `json:"id" bson:"id"`
+	AuditType          AuditType       `json:"audit_type" bson:"audit_type"`
+	SupplierAccount    string          `json:"bk_supplier_account" bson:"bk_supplier_account"`
+	User               string          `json:"user" bson:"user"`
+	ResourceType       ResourceType    `json:"resource_type" bson:"resource_type"`
+	Action             ActionType      `json:"action" bson:"action"`
+	OperateFrom        OperateFromType `json:"operate_from" bson:"operate_from"`
+	OperationTime      Time            `json:"operation_time" bson:"operation_time"`
+	OperationDetail    bson.Raw        `json:"operation_detail" bson:"operation_detail"`
+	BusinessID         int64           `json:"bk_biz_id" bson:"bk_biz_id"`
+	ResourceID         interface{}     `json:"resource_id" bson:"resource_id"`
+	ResourceName       string          `json:"resource_name" bson:"resource_name"`
+	AppCode            string          `json:"code" bson:"code"`
+	RequestID          string          `json:"rid" bson:"rid"`
+	ExtendResourceName string          `json:"extend_resource_name" bson:"extend_resource_name"`
 }
 
 type jsonAuditLog struct {
-	ID              int64           `json:"id" bson:"id"`
-	AuditType       AuditType       `json:"audit_type" bson:"audit_type"`
-	SupplierAccount string          `json:"bk_supplier_account" bson:"bk_supplier_account"`
-	User            string          `json:"user" bson:"user"`
-	ResourceType    ResourceType    `json:"resource_type" bson:"resource_type"`
-	Action          ActionType      `json:"action" bson:"action"`
-	OperateFrom     OperateFromType `json:"operate_from" bson:"operate_from"`
-	OperationTime   Time            `json:"operation_time" bson:"operation_time"`
-	OperationDetail json.RawMessage `json:"operation_detail" bson:"operation_detail"`
-	BusinessID      int64           `json:"bk_biz_id" bson:"bk_biz_id"`
-	ResourceID      interface{}     `json:"resource_id" bson:"resource_id"`
-	ResourceName    string          `json:"resource_name" bson:"resource_name"`
-	AppCode         string          `json:"code" bson:"code"`
-	RequestID       string          `json:"rid" bson:"rid"`
+	ID                 int64           `json:"id" bson:"id"`
+	AuditType          AuditType       `json:"audit_type" bson:"audit_type"`
+	SupplierAccount    string          `json:"bk_supplier_account" bson:"bk_supplier_account"`
+	User               string          `json:"user" bson:"user"`
+	ResourceType       ResourceType    `json:"resource_type" bson:"resource_type"`
+	Action             ActionType      `json:"action" bson:"action"`
+	OperateFrom        OperateFromType `json:"operate_from" bson:"operate_from"`
+	OperationTime      Time            `json:"operation_time" bson:"operation_time"`
+	OperationDetail    json.RawMessage `json:"operation_detail" bson:"operation_detail"`
+	BusinessID         int64           `json:"bk_biz_id" bson:"bk_biz_id"`
+	ResourceID         interface{}     `json:"resource_id" bson:"resource_id"`
+	ResourceName       string          `json:"resource_name" bson:"resource_name"`
+	AppCode            string          `json:"code" bson:"code"`
+	RequestID          string          `json:"rid" bson:"rid"`
+	ExtendResourceName string          `json:"extend_resource_name" bson:"extend_resource_name"`
 }
 
 // DetailFactory TODO
@@ -242,7 +247,8 @@ type DetailFactory interface {
 	WithName() string
 }
 
-// UnmarshalJSON TODO
+// UnmarshalJSON unmarshal AuditLog
+// NOCC:golint/fnsize(设计如此)
 func (auditLog *AuditLog) UnmarshalJSON(data []byte) error {
 	audit := jsonAuditLog{}
 	if err := json.Unmarshal(data, &audit); err != nil {
@@ -261,6 +267,7 @@ func (auditLog *AuditLog) UnmarshalJSON(data []byte) error {
 	auditLog.ResourceName = audit.ResourceName
 	auditLog.AppCode = audit.AppCode
 	auditLog.RequestID = audit.RequestID
+	auditLog.ExtendResourceName = audit.ExtendResourceName
 
 	if audit.OperationDetail == nil {
 		return nil
@@ -275,8 +282,18 @@ func (auditLog *AuditLog) UnmarshalJSON(data []byte) error {
 		return nil
 	}
 
+	switch audit.AuditType {
+	case KubeType, FieldTemplateType:
+		operationDetail := new(GenericOpDetail)
+		if err := json.Unmarshal(audit.OperationDetail, &operationDetail); err != nil {
+			return err
+		}
+		auditLog.OperationDetail = operationDetail
+		return nil
+	}
+
 	switch audit.ResourceType {
-	case BusinessRes, BizSetRes, SetRes, ModuleRes, ProcessRes, HostRes, CloudAreaRes, ModelInstanceRes,
+	case BusinessRes, BizSetRes, ProjectRes, SetRes, ModuleRes, ProcessRes, HostRes, CloudAreaRes, ModelInstanceRes,
 		MainlineInstanceRes, ResourceDirRes:
 		operationDetail := new(InstanceOpDetail)
 		if err := json.Unmarshal(audit.OperationDetail, &operationDetail); err != nil {
@@ -301,6 +318,18 @@ func (auditLog *AuditLog) UnmarshalJSON(data []byte) error {
 			return err
 		}
 		auditLog.OperationDetail = operationDetail
+	case QuotedInst:
+		operationDetail := new(QuotedInstOpDetail)
+		if err := json.Unmarshal(audit.OperationDetail, &operationDetail); err != nil {
+			return err
+		}
+		auditLog.OperationDetail = operationDetail
+	case ModelUniqueRes:
+		operationDetail := new(GenericOpDetail)
+		if err := json.Unmarshal(audit.OperationDetail, &operationDetail); err != nil {
+			return err
+		}
+		auditLog.OperationDetail = operationDetail
 	default:
 		operationDetail := new(BasicOpDetail)
 		if err := json.Unmarshal(audit.OperationDetail, &operationDetail); err != nil {
@@ -311,7 +340,8 @@ func (auditLog *AuditLog) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// UnmarshalBSON TODO
+// UnmarshalBSON unmarshal AuditLog
+// NOCC:golint/fnsize(设计如此)
 func (auditLog *AuditLog) UnmarshalBSON(data []byte) error {
 	audit := bsonAuditLog{}
 	if err := bson.Unmarshal(data, &audit); err != nil {
@@ -330,6 +360,7 @@ func (auditLog *AuditLog) UnmarshalBSON(data []byte) error {
 	auditLog.ResourceName = audit.ResourceName
 	auditLog.AppCode = audit.AppCode
 	auditLog.RequestID = audit.RequestID
+	auditLog.ExtendResourceName = audit.ExtendResourceName
 
 	if audit.OperationDetail == nil {
 		return nil
@@ -344,8 +375,18 @@ func (auditLog *AuditLog) UnmarshalBSON(data []byte) error {
 		return nil
 	}
 
+	switch audit.AuditType {
+	case KubeType, FieldTemplateType:
+		operationDetail := new(GenericOpDetail)
+		if err := bson.Unmarshal(audit.OperationDetail, &operationDetail); err != nil {
+			return err
+		}
+		auditLog.OperationDetail = operationDetail
+		return nil
+	}
+
 	switch audit.ResourceType {
-	case BusinessRes, BizSetRes, SetRes, ModuleRes, ProcessRes, HostRes, CloudAreaRes, ModelInstanceRes,
+	case BusinessRes, BizSetRes, ProjectRes, SetRes, ModuleRes, ProcessRes, HostRes, CloudAreaRes, ModelInstanceRes,
 		MainlineInstanceRes, ResourceDirRes:
 		operationDetail := new(InstanceOpDetail)
 		if err := bson.Unmarshal(audit.OperationDetail, &operationDetail); err != nil {
@@ -367,6 +408,18 @@ func (auditLog *AuditLog) UnmarshalBSON(data []byte) error {
 	case ServiceInstanceRes:
 		operationDetail := new(ServiceInstanceOpDetail)
 		if err := bson.Unmarshal(audit.OperationDetail, &operationDetail); err != nil {
+			return err
+		}
+		auditLog.OperationDetail = operationDetail
+	case QuotedInst:
+		operationDetail := new(QuotedInstOpDetail)
+		if err := bson.Unmarshal(audit.OperationDetail, &operationDetail); err != nil {
+			return err
+		}
+		auditLog.OperationDetail = operationDetail
+	case ModelUniqueRes:
+		operationDetail := new(GenericOpDetail)
+		if err := json.Unmarshal(audit.OperationDetail, &operationDetail); err != nil {
 			return err
 		}
 		auditLog.OperationDetail = operationDetail
@@ -396,6 +449,7 @@ func (auditLog AuditLog) MarshalBSON() ([]byte, error) {
 	audit.ResourceName = auditLog.ResourceName
 	audit.AppCode = auditLog.AppCode
 	audit.RequestID = auditLog.RequestID
+	audit.ExtendResourceName = auditLog.ExtendResourceName
 	var err error
 	switch val := auditLog.OperationDetail.(type) {
 	default:
@@ -536,8 +590,20 @@ func (op *ServiceInstanceOpDetail) WithName() string {
 	return "ServiceInstanceOpDetail"
 }
 
-// BasicContent TODO
-// Content contains the details information with in a user's operation.
+// QuotedInstOpDetail quoted instance operation detail
+type QuotedInstOpDetail struct {
+	BasicOpDetail `bson:",inline"`
+	ObjID         string `json:"bk_obj_id" bson:"bk_obj_id"`
+	SrcObjID      string `json:"src_obj_id" bson:"src_obj_id"`
+	AttrID        string `json:"bk_property_id" bson:"bk_property_id"`
+}
+
+// WithName returns operation detail name.
+func (op *QuotedInstOpDetail) WithName() string {
+	return "QuotedInstOpDetail"
+}
+
+// BasicContent contains the details information with in a user's operation.
 // Generally, works for business, model, model instance etc.
 type BasicContent struct {
 	// PreData the previous data before the deletion or updating operation
@@ -546,6 +612,20 @@ type BasicContent struct {
 	CurData map[string]interface{} `json:"cur_data" bson:"cur_data"`
 	// UpdateFields the data that user uses to update the pre data, might not be the actual changed data
 	UpdateFields map[string]interface{} `json:"update_fields" bson:"update_fields"`
+}
+
+// GenericOpDetail generic operation detail, including the operated data and the update fields for update operation
+// works for operation of structured data like pod, container etc.
+type GenericOpDetail struct {
+	// Data the operated data, which is previous data before delete or update, and current data after create operation
+	Data interface{} `json:"data" bson:"data"`
+	// UpdateFields the data that user uses to update the previous data, might not be the actual changed data
+	UpdateFields interface{} `json:"update_fields,omitempty'" bson:"update_fields,omitempty"`
+}
+
+// WithName returns the generic operation detail name
+func (op *GenericOpDetail) WithName() string {
+	return "GenericOpDetail"
 }
 
 // AuditType TODO
@@ -558,6 +638,9 @@ const (
 
 	// BizSetType represent operation audit of biz set itself
 	BizSetType AuditType = "biz_set"
+
+	// ProjectType represent operation audit of project itself
+	ProjectType AuditType = "project"
 
 	// BusinessResourceType TODO
 	// Business resource include resources as follows:
@@ -600,6 +683,19 @@ const (
 
 	// PlatFormSettingType is platform audit type
 	PlatFormSettingType AuditType = "platform_setting"
+
+	// KubeType is kube related audit type
+	KubeType AuditType = "kube"
+
+	// QuotedInstType is quoted instance related audit type
+	QuotedInstType AuditType = "quoted_inst"
+
+	// FieldTemplateType is field template audit type
+	FieldTemplateType AuditType = "field_template"
+
+	// ObjTemplateIDs In the context of audit logging, the tags of the
+	// binding field templates that correspond to the models
+	ObjTemplateIDs AuditType = "bk_template_ids"
 )
 
 // ResourceType TODO
@@ -610,6 +706,8 @@ const (
 	BusinessRes ResourceType = "business"
 	// BizSetRes TODO
 	BizSetRes ResourceType = "biz_set"
+	// ProjectRes project resource
+	ProjectRes ResourceType = "project"
 	// ServiceTemplateRes TODO
 	ServiceTemplateRes ResourceType = "service_template"
 	// SetTemplateRes TODO
@@ -677,6 +775,30 @@ const (
 
 	// PlatFormSettingRes platform related operation type
 	PlatFormSettingRes ResourceType = "platform_setting"
+
+	// kube related audit resource type
+	// KubeCluster kube cluster audit resource type
+	KubeCluster ResourceType = "kube_cluster"
+	// KubeNode kube node audit resource type
+	KubeNode ResourceType = "kube_node"
+	// KubeNamespace kube namespace audit resource type
+	KubeNamespace ResourceType = "kube_namespace"
+	// KubeWorkload kube workload audit resource type
+	KubeWorkload ResourceType = "kube_workload"
+	// KubePod kube pod audit resource type
+	KubePod ResourceType = "kube_pod"
+
+	// QuotedInst is quoted instance related audit resource type
+	QuotedInst ResourceType = "quoted_inst"
+
+	// FieldTemplateRes is field template related audit resource type
+	FieldTemplateRes ResourceType = "field_template"
+
+	// FieldTemplateAttrRes is field template attribute related audit resource type
+	FieldTemplateAttrRes ResourceType = "field_template_attribute"
+
+	// FieldTemplateUniqueRes is field template unique related audit resource type
+	FieldTemplateUniqueRes ResourceType = "field_template_unique"
 )
 
 // OperateFromType TODO
@@ -738,6 +860,8 @@ func GetAuditTypeByObjID(objID string, isMainline bool) AuditType {
 		return BizSetType
 	case common.BKInnerObjIDApp:
 		return BusinessType
+	case common.BKInnerObjIDProject:
+		return ProjectType
 	case common.BKInnerObjIDSet:
 		return BusinessResourceType
 	case common.BKInnerObjIDModule:
@@ -765,6 +889,8 @@ func GetResourceTypeByObjID(objID string, isMainline bool) ResourceType {
 		return BizSetRes
 	case common.BKInnerObjIDApp:
 		return BusinessRes
+	case common.BKInnerObjIDProject:
+		return ProjectRes
 	case common.BKInnerObjIDSet:
 		return SetRes
 	case common.BKInnerObjIDModule:
@@ -791,11 +917,12 @@ func GetAuditTypesByCategory(category string) []AuditType {
 	case "business":
 		return []AuditType{BusinessResourceType, DynamicGroupType}
 	case "resource":
-		return []AuditType{BusinessType, BizSetType, ModelInstanceType, CloudResourceType}
+		return []AuditType{BusinessType, BizSetType, ProjectType, ModelInstanceType, CloudResourceType, KubeType}
 	case "host":
 		return []AuditType{HostType}
 	case "other":
-		return []AuditType{ModelType, AssociationKindType, EventPushType, DynamicGroupType, PlatFormSettingType}
+		return []AuditType{ModelType, AssociationKindType, EventPushType, DynamicGroupType, PlatFormSettingType,
+			FieldTemplateType}
 	}
 	return []AuditType{}
 }
@@ -881,8 +1008,17 @@ var auditDict = []resourceTypeInfo{
 		},
 	},
 	{
+		ID:   ProjectRes,
+		Name: "项目",
+		Operations: []actionTypeInfo{
+			actionInfoMap[AuditCreate],
+			actionInfoMap[AuditUpdate],
+			actionInfoMap[AuditDelete],
+		},
+	},
+	{
 		ID:   CloudAreaRes,
-		Name: "云区域",
+		Name: "管控区域",
 		Operations: []actionTypeInfo{
 			actionInfoMap[AuditCreate],
 			actionInfoMap[AuditUpdate],
@@ -983,6 +1119,33 @@ var auditDict = []resourceTypeInfo{
 	{
 		ID:   PlatFormSettingRes,
 		Name: "平台管理",
+		Operations: []actionTypeInfo{
+			actionInfoMap[AuditCreate],
+			actionInfoMap[AuditUpdate],
+			actionInfoMap[AuditDelete],
+		},
+	},
+	{
+		ID:   FieldTemplateRes,
+		Name: "字段组合模版",
+		Operations: []actionTypeInfo{
+			actionInfoMap[AuditCreate],
+			actionInfoMap[AuditUpdate],
+			actionInfoMap[AuditDelete],
+		},
+	},
+	{
+		ID:   FieldTemplateAttrRes,
+		Name: "字段组合模版字段",
+		Operations: []actionTypeInfo{
+			actionInfoMap[AuditCreate],
+			actionInfoMap[AuditUpdate],
+			actionInfoMap[AuditDelete],
+		},
+	},
+	{
+		ID:   FieldTemplateUniqueRes,
+		Name: "字段组合模版唯一校验",
 		Operations: []actionTypeInfo{
 			actionInfoMap[AuditCreate],
 			actionInfoMap[AuditUpdate],
@@ -1108,6 +1271,15 @@ var auditEnDict = []resourceTypeInfo{
 		},
 	},
 	{
+		ID:   ProjectRes,
+		Name: "Project",
+		Operations: []actionTypeInfo{
+			actionInfoEnMap[AuditCreate],
+			actionInfoEnMap[AuditUpdate],
+			actionInfoEnMap[AuditDelete],
+		},
+	},
+	{
 		ID:   CloudAreaRes,
 		Name: "Cloud Area",
 		Operations: []actionTypeInfo{
@@ -1210,6 +1382,33 @@ var auditEnDict = []resourceTypeInfo{
 	{
 		ID:   PlatFormSettingRes,
 		Name: "Platform Management",
+		Operations: []actionTypeInfo{
+			actionInfoEnMap[AuditCreate],
+			actionInfoEnMap[AuditUpdate],
+			actionInfoEnMap[AuditDelete],
+		},
+	},
+	{
+		ID:   FieldTemplateRes,
+		Name: "Field Grouping Template",
+		Operations: []actionTypeInfo{
+			actionInfoEnMap[AuditCreate],
+			actionInfoEnMap[AuditUpdate],
+			actionInfoEnMap[AuditDelete],
+		},
+	},
+	{
+		ID:   FieldTemplateAttrRes,
+		Name: "Field Grouping Template Attribute",
+		Operations: []actionTypeInfo{
+			actionInfoEnMap[AuditCreate],
+			actionInfoEnMap[AuditUpdate],
+			actionInfoEnMap[AuditDelete],
+		},
+	},
+	{
+		ID:   FieldTemplateUniqueRes,
+		Name: "Field Grouping Template Unique",
 		Operations: []actionTypeInfo{
 			actionInfoEnMap[AuditCreate],
 			actionInfoEnMap[AuditUpdate],

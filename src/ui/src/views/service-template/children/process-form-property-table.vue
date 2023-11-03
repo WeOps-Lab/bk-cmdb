@@ -15,45 +15,47 @@
     v-bind="$attrs"
     v-model="localValue"
     :options="options">
-    <div class="process-table-content"
-      v-for="column in options"
-      slot-scope="rowProps"
-      :slot="column.bk_property_id"
-      :key="`row-${rowProps.index}-${column.bk_property_id}`"
-      :class="{ 'is-lock': isLocked(rowProps) }">
-      <component class="content-value"
-        size="small"
-        font-size="small"
-        v-bind="getEvents(column)"
-        v-validate="getRules(rowProps, column)"
-        :data-vv-name="column.bk_property_id"
-        :data-vv-as="column.bk_property_name"
-        :data-vv-scope="column.bk_property_group || 'bind_info'"
-        :is="getComponentType(column)"
-        :options="column.option || []"
-        :placeholder="getPlaceholder(column)"
-        :value="localValue[rowProps.index][column.bk_property_id]"
-        :auto-select="false"
-        @input="handleColumnValueChange(rowProps, ...arguments)">
-      </component>
-      <span class="property-lock-state"
-        v-bk-tooltips="{
-          placement: 'top',
-          interactive: false,
-          content: $t('进程模板加解锁提示语'),
-          delay: [100, 0]
-        }"
-        tabindex="-1"
-        @click="setLockState(rowProps)">
-        <i class="icon-cc-lock-fill" v-if="isLocked(rowProps)"></i>
-        <i class="icon-cc-unlock-fill" v-else></i>
-      </span>
-    </div>
+    <template v-for="column in options" #[column.bk_property_id]="rowProps">
+      <div class="process-table-content"
+        :key="`row-${rowProps.index}-${column.bk_property_id}`"
+        :class="{ 'is-lock': isLocked(rowProps) }">
+        <component class="content-value"
+          size="small"
+          font-size="small"
+          v-bind="getEvents(column)"
+          v-validate="getRules(rowProps, column)"
+          :data-vv-name="column.bk_property_id"
+          :data-vv-as="column.bk_property_name"
+          :data-vv-scope="column.bk_property_group || 'bind_info'"
+          :is="getComponentType(column)"
+          :options="getOptions(rowProps, column)"
+          :placeholder="getPlaceholder(column)"
+          :value="localValue[rowProps.index][column.bk_property_id]"
+          :auto-select="false"
+          @input="handleColumnValueChange(rowProps, ...arguments)">
+        </component>
+        <span class="property-lock-state"
+          v-bk-tooltips="{
+            placement: 'top',
+            interactive: false,
+            content: $t('进程模板加解锁提示语'),
+            delay: [100, 0]
+          }"
+          tabindex="-1"
+          @click="setLockState(rowProps)">
+          <i class="icon-cc-lock-fill" v-if="isLocked(rowProps)"></i>
+          <i class="icon-cc-unlock-fill" v-else></i>
+        </span>
+      </div>
+    </template>
   </cmdb-form-table>
 </template>
 
 <script>
   import ProcessFormPropertyIp from './process-form-property-ip'
+  import { PROCESS_BIND_IPV4_MAP, PROCESS_BIND_IPV6_MAP } from '@/dictionary/process-bind-ip.js'
+  import { PROCESS_BIND_PROTOCOL_V4_LIST, PROCESS_BIND_PROTOCOL_V6_LIST } from '@/dictionary/process-bind-protocol.js'
+
   export default {
     components: {
       ProcessFormPropertyIp
@@ -118,6 +120,12 @@
           locked: this.$tools.getInstFormValues(this.options, { ip: '1' }, true),
           unlocked: this.$tools.getInstFormValues(this.options, {}, false)
         }
+      },
+      IPV4Keys() {
+        return Object.keys(PROCESS_BIND_IPV4_MAP)
+      },
+      IPV6Keys() {
+        return Object.keys(PROCESS_BIND_IPV6_MAP)
       }
     },
     methods: {
@@ -158,8 +166,32 @@
         }
         return rules
       },
+      getOptions({ row }, property) {
+        // protocol列的选项与ip类型联动，ipv4对应v4的协议选项，ipv6则对应v6的协议选项
+        if (property.bk_property_id === 'protocol') {
+          if (this.IPV4Keys.includes(row.ip)) {
+            return property.option.filter(item => PROCESS_BIND_PROTOCOL_V4_LIST.includes(item.id))
+          }
+          if (this.IPV6Keys.includes(row.ip)) {
+            return property.option.filter(item => PROCESS_BIND_PROTOCOL_V6_LIST.includes(item.id))
+          }
+        }
+
+        return property.option || []
+      },
       handleColumnValueChange({ row, column, index }, value) {
         const rowValue = { ...row }
+
+        // 变更ip值时，如果ip类型与协议类型值不一致则需要重置其值
+        if (column.property === 'ip') {
+          if (this.IPV4Keys.includes(value) && !PROCESS_BIND_PROTOCOL_V4_LIST.includes(rowValue.protocol)) {
+            rowValue.protocol = ''
+          }
+          if (this.IPV6Keys.includes(value) && !PROCESS_BIND_PROTOCOL_V6_LIST.includes(rowValue.protocol)) {
+            rowValue.protocol = ''
+          }
+        }
+
         rowValue[column.property] = value
         const newValues = [...this.localValue]
         newValues.splice(index, 1, rowValue)

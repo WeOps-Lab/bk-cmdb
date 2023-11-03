@@ -44,6 +44,22 @@ type ResourceAttribute struct {
 	Layers Layers `json:"layers"`
 }
 
+// GenResAttrByIDs generate auth resource attributes by instance ids
+func GenResAttrByIDs(resType ResourceType, action Action, businessID int64, ids []int64) []ResourceAttribute {
+	attributes := make([]ResourceAttribute, len(ids))
+	for i, id := range ids {
+		attributes[i] = ResourceAttribute{
+			Basic: Basic{
+				Type:       resType,
+				Action:     action,
+				InstanceID: id,
+			},
+			BusinessID: businessID,
+		}
+	}
+	return attributes
+}
+
 // Basic defines the basic info for a resource.
 type Basic struct {
 	// the name of the affiliated resource, which could be a model name.
@@ -144,6 +160,7 @@ const (
 	AddHostToResourcePool Action = "addHostToResourcePool"
 	// MoveBizHostFromModuleToResPool TODO
 	MoveBizHostFromModuleToResPool Action = "moveHostFromModuleToResPool"
+	ManageHostAgentID              Action = "manageHostAgentID"
 	// MoveHostToAnotherBizModule TODO
 	MoveHostToAnotherBizModule Action = "moveHostToAnotherBizModule"
 
@@ -174,9 +191,25 @@ const (
 	WatchInstAsst Action = "inst_asst"
 	// WatchBizSet TODO
 	WatchBizSet Action = "biz_set"
+	// WatchPlat watch cloud area event cc action
+	WatchPlat Action = "plat"
+	// WatchProject watch project event cc action
+	WatchProject Action = "project"
 
-	// ViewBusinessResource TODO
-	// can view business related resources, including business and business collection resources
+	// kube related event watch cc actions
+
+	// WatchKubeCluster watch kube cluster event cc action
+	WatchKubeCluster Action = "kube_cluster"
+	// WatchKubeNode watch kube node event cc action
+	WatchKubeNode Action = "kube_node"
+	// WatchKubeNamespace watch kube namespace event cc action
+	WatchKubeNamespace Action = "kube_namespace"
+	// WatchKubeWorkload watch kube workload event cc action
+	WatchKubeWorkload Action = "kube_workload"
+	// WatchKubePod watch kube pod event cc action
+	WatchKubePod Action = "kube_pod"
+
+	// ViewBusinessResource view business related resources action, including business and business collection resources
 	ViewBusinessResource Action = "viewBusinessResource"
 
 	// AccessBizSet access business set related resources, including business and business related resources

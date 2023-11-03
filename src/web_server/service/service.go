@@ -29,6 +29,7 @@ import (
 	"configcenter/src/storage/dal/redis"
 	"configcenter/src/thirdparty/logplatform/opentelemetry"
 	"configcenter/src/web_server/app/options"
+	webCommon "configcenter/src/web_server/common"
 	"configcenter/src/web_server/logics"
 	"configcenter/src/web_server/middleware"
 
@@ -79,7 +80,8 @@ func (s *Service) WebService() *gin.Engine {
 	middleware.Engine = s.Engine
 
 	ws.Static("/static", s.Config.Site.HtmlRoot)
-	ws.LoadHTMLFiles(s.Config.Site.HtmlRoot+"/index.html", s.Config.Site.HtmlRoot+"/login.html")
+	ws.LoadHTMLFiles(s.Config.Site.HtmlRoot+"/index.html", s.Config.Site.HtmlRoot+"/login.html",
+		s.Config.Site.HtmlRoot+"/"+webCommon.InaccessibleHtml)
 
 	ws.POST("/hosts/import", s.ImportHost)
 	ws.POST("/hosts/export", s.ExportHost)
@@ -116,12 +118,6 @@ func (s *Service) WebService() *gin.Engine {
 
 	ws.GET("/", s.Index)
 
-	ws.POST("/netdevice/import", s.ImportNetDevice)
-	ws.POST("/netdevice/export", s.ExportNetDevice)
-	ws.GET("/netcollect/importtemplate/netdevice", s.BuildDownLoadNetDeviceExcelTemplate)
-	ws.POST("/netproperty/import", s.ImportNetProperty)
-	ws.POST("/netproperty/export", s.ExportNetProperty)
-	ws.GET("/netcollect/importtemplate/netproperty", s.BuildDownLoadNetPropertyExcelTemplate)
 	ws.POST("/object/count", s.GetObjectInstanceCount)
 
 	ws.POST("/regular/verify_regular_express", s.VerifyRegularExpress)
@@ -129,9 +125,19 @@ func (s *Service) WebService() *gin.Engine {
 
 	ws.Any("/proxy/:method/:target/*target_url", s.ProxyRequest)
 
+	// get changelog info
+	ws.POST("findmany/changelog", s.GetVersionList)
+	ws.POST("find/changelog/detail", s.GetVersionDetail)
+
 	// common api
 	ws.GET("/healthz", s.Healthz)
 	ws.GET("/version", ginservice.Version)
+
+	// table instance, only for ui, should be removed later
+	s.initModelQuote(ws)
+
+	// field template, only for ui
+	s.initFieldTemplate(ws)
 
 	// if no route, redirect to 404 page
 	ws.NoRoute(func(c *gin.Context) {

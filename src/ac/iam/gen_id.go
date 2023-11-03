@@ -33,6 +33,8 @@ func GenIamResource(act ActionID, rscType TypeID, a *meta.ResourceAttribute) ([]
 		return genBusinessResource(act, rscType, a)
 	case meta.BizSet:
 		return genBizSetResource(act, rscType, a)
+	case meta.Project:
+		return genProjectResource(act, rscType, a)
 	case meta.DynamicGrouping:
 		return genDynamicGroupingResource(act, rscType, a)
 	case meta.EventWatch:
@@ -93,6 +95,12 @@ func GenIamResource(act ActionID, rscType TypeID, a *meta.ResourceAttribute) ([]
 		return make([]types.Resource, 0), nil
 	case meta.ProcessServiceCategory:
 		return genProcessServiceCategoryResource(act, rscType, a)
+	case meta.KubeCluster, meta.KubeNode, meta.KubeNamespace, meta.KubeWorkload, meta.KubeDeployment,
+		meta.KubeStatefulSet, meta.KubeDaemonSet, meta.KubeGameStatefulSet, meta.KubeGameDeployment, meta.KubeCronJob,
+		meta.KubeJob, meta.KubePodWorkload, meta.KubePod, meta.KubeContainer:
+		return make([]types.Resource, 0), nil
+	case meta.FieldTemplate:
+		return genFieldTemplateResource(act, rscType, a)
 	default:
 		if IsCMDBSysInstance(a.Basic.Type) {
 			return genSysInstanceResource(act, rscType, a)
@@ -135,6 +143,26 @@ func genBizSetResource(act ActionID, typ TypeID, attribute *meta.ResourceAttribu
 
 	// create biz set do not related to instance authorize
 	if act == CreateBizSet {
+		return make([]types.Resource, 0), nil
+	}
+
+	// compatible for authorize any
+	if attribute.InstanceID > 0 {
+		r.ID = strconv.FormatInt(attribute.InstanceID, 10)
+	}
+
+	return []types.Resource{r}, nil
+}
+
+func genProjectResource(act ActionID, typ TypeID, attribute *meta.ResourceAttribute) ([]types.Resource, error) {
+	r := types.Resource{
+		System:    SystemIDCMDB,
+		Type:      types.ResourceType(typ),
+		Attribute: nil,
+	}
+
+	// create project do not related to instance authorize
+	if act == CreateProject {
 		return make([]types.Resource, 0), nil
 	}
 
@@ -231,6 +259,17 @@ func genResourceWatch(act ActionID, typ TypeID, att *meta.ResourceAttribute) ([]
 		r.Type = types.ResourceType(InstAsstEvent)
 		if att.InstanceID > 0 {
 			r.ID = strconv.FormatInt(att.InstanceID, 10)
+		}
+		return []types.Resource{r}, nil
+
+	case WatchKubeWorkloadEvent:
+		r := types.Resource{
+			System: SystemIDCMDB,
+		}
+
+		r.Type = types.ResourceType(KubeWorkloadEvent)
+		if att.InstanceIDEx != "" {
+			r.ID = att.InstanceIDEx
 		}
 		return []types.Resource{r}, nil
 
@@ -689,6 +728,24 @@ func genSysInstanceResource(act ActionID, typ TypeID, att *meta.ResourceAttribut
 		System:    SystemIDCMDB,
 		Type:      types.ResourceType(typ),
 		Attribute: nil,
+	}
+
+	// create action do not related to instance authorize
+	if att.Action == meta.Create || att.Action == meta.CreateMany {
+		return make([]types.Resource, 0), nil
+	}
+
+	if att.InstanceID > 0 {
+		r.ID = strconv.FormatInt(att.InstanceID, 10)
+	}
+
+	return []types.Resource{r}, nil
+}
+
+func genFieldTemplateResource(act ActionID, typ TypeID, att *meta.ResourceAttribute) ([]types.Resource, error) {
+	r := types.Resource{
+		System: SystemIDCMDB,
+		Type:   types.ResourceType(FieldGroupingTemplate),
 	}
 
 	// create action do not related to instance authorize

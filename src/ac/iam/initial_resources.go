@@ -25,8 +25,9 @@ var (
 var ResourceTypeIDMap = map[TypeID]string{
 	Business:                 "业务",
 	BizSet:                   "业务集",
+	Project:                  "项目",
 	BusinessForHostTrans:     "业务主机",
-	SysCloudArea:             "云区域",
+	SysCloudArea:             "管控区域",
 	SysResourcePoolDirectory: "主机池目录",
 	SysHostRscPoolDirectory:  "主机池主机",
 	SysModelGroup:            "模型分组",
@@ -35,6 +36,7 @@ var ResourceTypeIDMap = map[TypeID]string{
 	SysModelEvent:            "模型列表",
 	MainlineModelEvent:       "资源事件",
 	InstAsstEvent:            "实例关联事件",
+	KubeWorkloadEvent:        "容器工作负载事件",
 	// SysInstance:               "实例",
 	SysAssociationType:        "关联类型",
 	SysOperationStatistic:     "运营统计",
@@ -51,6 +53,7 @@ var ResourceTypeIDMap = map[TypeID]string{
 	BizSetTemplate:            "集群模板",
 	BizTopology:               "业务拓扑",
 	BizProcessServiceTemplate: "服务模板",
+	FieldGroupingTemplate:     "字段组合模板",
 }
 
 // GenerateResourceTypes generate all the resource types registered to IAM.
@@ -264,6 +267,18 @@ func genPublicResources() []ResourceType {
 			Version: 1,
 		},
 		{
+			ID:            Project,
+			Name:          ResourceTypeIDMap[Project],
+			NameEn:        "Project",
+			Description:   "项目列表",
+			DescriptionEn: "all the project in blueking cmdb.",
+			Parents:       nil,
+			ProviderConfig: ResourceConfig{
+				Path: "/auth/v3/find/resource",
+			},
+			Version: 1,
+		},
+		{
 			ID:            BusinessForHostTrans,
 			Name:          ResourceTypeIDMap[BusinessForHostTrans],
 			NameEn:        "Host In Business",
@@ -279,7 +294,7 @@ func genPublicResources() []ResourceType {
 			ID:            SysCloudArea,
 			Name:          ResourceTypeIDMap[SysCloudArea],
 			NameEn:        "Cloud Area",
-			Description:   "云区域",
+			Description:   "管控区域",
 			DescriptionEn: "cloud area",
 			Parents:       nil,
 			ProviderConfig: ResourceConfig{
@@ -450,6 +465,28 @@ func genPublicResources() []ResourceType {
 			Description:   "实例关联事件",
 			DescriptionEn: "instance association event",
 			Parents:       nil,
+			ProviderConfig: ResourceConfig{
+				Path: "/auth/v3/find/resource",
+			},
+			Version: 1,
+		},
+		{
+			ID:            KubeWorkloadEvent,
+			Name:          ResourceTypeIDMap[KubeWorkloadEvent],
+			NameEn:        "Kube Workload Event",
+			Description:   "容器工作负载事件",
+			DescriptionEn: "kube workload event",
+			ProviderConfig: ResourceConfig{
+				Path: "/auth/v3/find/resource",
+			},
+			Version: 1,
+		},
+		{
+			ID:            FieldGroupingTemplate,
+			Name:          ResourceTypeIDMap[FieldGroupingTemplate],
+			NameEn:        "Field Grouping Template",
+			Description:   "字段组合模板",
+			DescriptionEn: "Field Grouping Template",
 			ProviderConfig: ResourceConfig{
 				Path: "/auth/v3/find/resource",
 			},

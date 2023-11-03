@@ -58,6 +58,8 @@ func ConvertResourceType(resourceType meta.ResourceType, businessID int64) (*Typ
 		iamResourceType = Business
 	case meta.BizSet:
 		iamResourceType = BizSet
+	case meta.Project:
+		iamResourceType = Project
 	case meta.Model,
 		meta.ModelUnique,
 		meta.ModelAttributeGroup:
@@ -121,6 +123,11 @@ func ConvertResourceType(resourceType meta.ResourceType, businessID int64) (*Typ
 		iamResourceType = SysEventWatch
 	case meta.ConfigAdmin:
 	case meta.SystemConfig:
+	case meta.KubeCluster, meta.KubeNode, meta.KubeNamespace, meta.KubeWorkload, meta.KubeDeployment,
+		meta.KubeStatefulSet, meta.KubeDaemonSet, meta.KubeGameStatefulSet, meta.KubeGameDeployment, meta.KubeCronJob,
+		meta.KubeJob, meta.KubePodWorkload, meta.KubePod, meta.KubeContainer:
+	case meta.FieldTemplate:
+		iamResourceType = FieldGroupingTemplate
 	default:
 		if IsCMDBSysInstance(resourceType) {
 			iamResourceType = TypeID(resourceType)
@@ -270,6 +277,7 @@ var resourceActionMap = map[meta.ResourceType]map[meta.Action]ActionID{
 		meta.MoveHostToAnotherBizModule:     HostTransferAcrossBusiness,
 		meta.Find:                           Skip,
 		meta.FindMany:                       Skip,
+		meta.ManageHostAgentID:              ManageHostAgentID,
 	},
 	meta.ProcessServiceCategory: {
 		meta.Delete: DeleteBusinessServiceCategory,
@@ -406,6 +414,13 @@ var resourceActionMap = map[meta.ResourceType]map[meta.Action]ActionID{
 		meta.WatchMainlineInstance: WatchMainlineInstanceEvent,
 		meta.WatchInstAsst:         WatchInstAsstEvent,
 		meta.WatchBizSet:           WatchBizSetEvent,
+		meta.WatchPlat:             WatchPlatEvent,
+		meta.WatchKubeCluster:      WatchKubeClusterEvent,
+		meta.WatchKubeNode:         WatchKubeNodeEvent,
+		meta.WatchKubeNamespace:    WatchKubeNamespaceEvent,
+		meta.WatchKubeWorkload:     WatchKubeWorkloadEvent,
+		meta.WatchKubePod:          WatchKubePodEvent,
+		meta.WatchProject:          WatchProjectEvent,
 	},
 	meta.UserCustom: {
 		meta.Find:   Skip,
@@ -476,6 +491,98 @@ var resourceActionMap = map[meta.ResourceType]map[meta.Action]ActionID{
 		meta.Update: GlobalSettings,
 		meta.Delete: Unsupported,
 		meta.Create: Unsupported,
+	},
+	meta.KubeCluster: {
+		meta.Find:   Skip,
+		meta.Update: EditContainerCluster,
+		meta.Delete: DeleteContainerCluster,
+		meta.Create: CreateContainerCluster,
+	},
+	meta.KubeNode: {
+		meta.Find:   Skip,
+		meta.Update: EditContainerNode,
+		meta.Delete: DeleteContainerNode,
+		meta.Create: CreateContainerNode,
+	},
+	meta.KubeNamespace: {
+		meta.Find:   Skip,
+		meta.Update: EditContainerNamespace,
+		meta.Delete: DeleteContainerNamespace,
+		meta.Create: CreateContainerNamespace,
+	},
+	meta.KubeWorkload: {
+		meta.Find:   Skip,
+		meta.Update: EditContainerWorkload,
+		meta.Delete: DeleteContainerWorkload,
+		meta.Create: CreateContainerWorkload,
+	},
+	meta.KubeDeployment: {
+		meta.Find:   Skip,
+		meta.Update: EditContainerWorkload,
+		meta.Delete: DeleteContainerWorkload,
+		meta.Create: CreateContainerWorkload,
+	},
+	meta.KubeStatefulSet: {
+		meta.Find:   Skip,
+		meta.Update: EditContainerWorkload,
+		meta.Delete: DeleteContainerWorkload,
+		meta.Create: CreateContainerWorkload,
+	},
+	meta.KubeDaemonSet: {
+		meta.Find:   Skip,
+		meta.Update: EditContainerWorkload,
+		meta.Delete: DeleteContainerWorkload,
+		meta.Create: CreateContainerWorkload,
+	},
+	meta.KubeGameStatefulSet: {
+		meta.Find:   Skip,
+		meta.Update: EditContainerWorkload,
+		meta.Delete: DeleteContainerWorkload,
+		meta.Create: CreateContainerWorkload,
+	},
+	meta.KubeGameDeployment: {
+		meta.Find:   Skip,
+		meta.Update: EditContainerWorkload,
+		meta.Delete: DeleteContainerWorkload,
+		meta.Create: CreateContainerWorkload,
+	},
+	meta.KubeCronJob: {
+		meta.Find:   Skip,
+		meta.Update: EditContainerWorkload,
+		meta.Delete: DeleteContainerWorkload,
+		meta.Create: CreateContainerWorkload,
+	},
+	meta.KubeJob: {
+		meta.Find:   Skip,
+		meta.Update: EditContainerWorkload,
+		meta.Delete: DeleteContainerWorkload,
+		meta.Create: CreateContainerWorkload,
+	},
+	meta.KubePodWorkload: {
+		meta.Find:   Skip,
+		meta.Update: EditContainerWorkload,
+		meta.Delete: DeleteContainerWorkload,
+		meta.Create: CreateContainerWorkload,
+	},
+	meta.KubePod: {
+		meta.Find:   Skip,
+		meta.Delete: DeleteContainerPod,
+		meta.Create: CreateContainerPod,
+	},
+	meta.KubeContainer: {
+		meta.Find: Skip,
+	},
+	meta.Project: {
+		meta.Find:   Skip,
+		meta.Update: EditProject,
+		meta.Delete: DeleteProject,
+		meta.Create: CreateProject,
+	},
+	meta.FieldTemplate: {
+		meta.Create: CreateFieldGroupingTemplate,
+		meta.Find:   ViewFieldGroupingTemplate,
+		meta.Update: EditFieldGroupingTemplate,
+		meta.Delete: DeleteFieldGroupingTemplate,
 	},
 }
 

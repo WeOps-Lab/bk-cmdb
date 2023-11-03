@@ -28,6 +28,7 @@ import (
 	"configcenter/src/common/mapstr"
 	"configcenter/src/common/metadata"
 	"configcenter/src/common/util"
+	"configcenter/src/scene_server/topo_server/logics/inst"
 )
 
 // AssociationOperationInterface association operation methods
@@ -40,6 +41,8 @@ type AssociationOperationInterface interface {
 	// FindAssociationByObjectAssociationID find association by objid and asstid
 	FindAssociationByObjectAssociationID(kit *rest.Kit, objID string,
 		asstIDArr []string) ([]metadata.Association, errors.CCError)
+	// SetProxy proxy the interface
+	SetProxy(asst inst.AssociationOperationInterface)
 }
 
 // NewAssociationOperation create a new association operation instance
@@ -54,6 +57,12 @@ func NewAssociationOperation(client apimachinery.ClientSetInterface,
 type association struct {
 	clientSet   apimachinery.ClientSetInterface
 	authManager *extensions.AuthManager
+	asst        inst.AssociationOperationInterface
+}
+
+// SetProxy proxy the interface
+func (assoc *association) SetProxy(asst inst.AssociationOperationInterface) {
+	assoc.asst = asst
 }
 
 // ImportInstAssociation add instance association by excel
@@ -335,6 +344,17 @@ func (ia *importAssociation) checkExcelAssociationOperate(idx int, srcInstID, ds
 			return false
 		}
 
+		input := &metadata.CreateAssociationInstRequest{
+			ObjectAsstID: asstInfo.ObjectAsstID,
+			InstID:       srcInstID,
+			AsstInstID:   dstInstID,
+		}
+
+		if err = ia.cli.asst.CheckInstAsstMapping(ia.kit, ia.objID, asst.Mapping, input); err != nil {
+			ia.parseImportDataErr[idx] = err.Error()
+			return false
+		}
+
 		ia.addSrcAssociation(idx, asst.AssociationName, srcInstID, dstInstID)
 		return true
 
@@ -413,7 +433,8 @@ func (ia *importAssociation) getProperty(kit *rest.Kit, objIDArr []string, uniID
 	attrCond.Fields = []string{
 		common.BKFieldID, common.BKObjIDField, common.BKPropertyIDField, common.BKPropertyNameField,
 	}
-	rsp, err := ia.cli.clientSet.CoreService().Model().ReadModelAttrByCondition(ia.kit.Ctx, ia.kit.Header, attrCond)
+	rsp, err := ia.cli.clientSet.CoreService().Model().ReadModelAttrsWithTableByCondition(ia.kit.Ctx,
+		ia.kit.Header, 0, attrCond)
 	if err != nil {
 		blog.Errorf("search attribute failed, err: %v, input:%#v, rid:%s", err, attrCond, ia.kit.Rid)
 		return nil, err

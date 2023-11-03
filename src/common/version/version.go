@@ -30,6 +30,7 @@ var (
 	CCDistro        = "community" // enterprise, community
 	CCDistroVersion = "9999.9999.9999"
 	ServiceName     = "unknown"
+	GoVersion       = "unknown"
 )
 
 // CCRunMode enumeration
@@ -37,6 +38,7 @@ var (
 	CCRunModeProduct = "product"
 	CCRunModeTest    = "test"
 	CCRunModeDev     = "dev"
+	CCRunModeForCI   = "for_ci"
 )
 
 var (
@@ -44,11 +46,6 @@ var (
 	CCDistrEnterprise = "enterprise"
 	// CCDistrCommunity TODO
 	CCDistrCommunity = "community"
-)
-
-var (
-	// CanCreateSetModuleWithoutTemplate means whether user can create set and module without template
-	CanCreateSetModuleWithoutTemplate = true
 )
 
 // ShowVersion is the default handler which match the --version flag
@@ -65,6 +62,7 @@ GitHash     : %s
 RunMode     : %s
 Distribution: %s
 ServiceName : %s
-`, CCVersion, CCTag, CCBuildTime, CCGitHash, CCRunMode, CCDistro, ServiceName)
+GoVersion   : %s
+`, CCVersion, CCTag, CCBuildTime, CCGitHash, CCRunMode, CCDistro, ServiceName, GoVersion)
 	return version
 }

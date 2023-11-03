@@ -19,19 +19,25 @@ const magicboxLanguageMap = {
   zh_CN: magicbox.locale.lang.zhCN,
   en: magicbox.locale.lang.enUS
 }
-i18n.mergeLocaleMessage(i18n.locale, magicboxLanguageMap[i18n.locale])
-magicbox.locale.use(magicboxLanguageMap[i18n.locale])
+
+export const setLocale = (targetLocale) => {
+  const locale = targetLocale || i18n.locale
+  i18n.mergeLocaleMessage(locale, magicboxLanguageMap[locale])
+  magicbox.locale.use(magicboxLanguageMap[locale])
+}
+setLocale()
+
 Vue.use(magicbox, {
   'bk-sideslider': {
     quickClose: true,
     width: 800
   },
-  'bk-input': {
-    fontSize: 'medium'
-  },
-  'bk-select': {
-    fontSize: 'medium'
-  },
+  // 'bk-input': {
+  //   fontSize: 'medium'
+  // },
+  // 'bk-select': {
+  //   fontSize: 'medium'
+  // },
   'bk-big-tree': {
     useDefaultEmpty: true
   },
@@ -65,7 +71,7 @@ export const $warn = (message, delay = 3000) => magicbox.bkMessage({
 
 export const $bkInfo = magicbox.bkInfoBox
 
-export const $bkPopover = magicbox.bkPopover
+export const { $bkPopover } = Vue.prototype
 
 Vue.prototype.$error = $error
 Vue.prototype.$success = $success

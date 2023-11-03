@@ -23,29 +23,42 @@
             :label="group['bk_group_name']"
             :collapse.sync="groupState[group['bk_group_id']]">
             <ul class="property-list clearfix">
-              <li :class="['property-item clearfix fl', { flex: flexProperties.includes(property['bk_property_id']) }]"
-                v-for="property in $groupedProperties[groupIndex]"
-                :key="`${property['bk_obj_id']}-${property['bk_property_id']}`">
-                <span class="property-name fl"
-                  v-if="!invisibleNameProperties.includes(property['bk_property_id'])"
-                  :title="property['bk_property_name']">{{property['bk_property_name']}}
-                </span>
-                <slot :name="property['bk_property_id']">
-                  <span class="property-value clearfix fl"
-                    v-if="property.unit"
-                    v-bk-overflow-tips>
-                    <span class="property-value-text fl">{{getValue(property)}}</span>
-                    <span class="property-value-unit fl" v-if="getValue(property) !== '--'">{{property.unit}}</span>
+              <template v-for="property in $groupedProperties[groupIndex]">
+                <li :class="['property-item fl', property.bk_property_type, {
+                      flex: flexProperties.includes(property['bk_property_id'])
+                    }]"
+                  v-if="!invisibleProperties.includes(property['bk_property_id'])"
+                  :key="`${property['bk_obj_id']}-${property['bk_property_id']}`">
+                  <span class="property-name"
+                    v-if="!invisibleNameProperties.includes(property['bk_property_id'])"
+                    :title="property['bk_property_name']">{{property['bk_property_name']}}
                   </span>
-                  <cmdb-property-value
-                    v-else
-                    v-bk-overflow-tips
-                    :class="'property-value fl'"
-                    :value="inst[property.bk_property_id]"
-                    :property="property">
-                  </cmdb-property-value>
-                </slot>
-              </li>
+                  <slot :name="property['bk_property_id']">
+                    <cmdb-property-value
+                      :is-show-overflow-tips="isShowOverflowTips(property)"
+                      :class="'property-value'"
+                      :ref="`property-value-${property.id}`"
+                      :value="inst[property.bk_property_id]"
+                      :instance="inst"
+                      :property="property">
+                    </cmdb-property-value>
+                  </slot>
+                  <template v-if="showCopy
+                    && !$tools.isEmptyPropertyValue(inst[property.bk_property_id])
+                    && property.bk_property_type !== PROPERTY_TYPES.INNER_TABLE">
+                    <div class="copy-box">
+                      <i class="property-copy icon-cc-details-copy" @click="handleCopy(property.id)"></i>
+                      <transition name="fade">
+                        <span class="copy-tips"
+                          :style="{ width: $i18n.locale === 'en' ? '100px' : '70px' }"
+                          v-if="showCopyTips === property.id">
+                          {{$t('复制成功')}}
+                        </span>
+                      </transition>
+                    </div>
+                  </template>
+                </li>
+              </template>
             </ul>
           </cmdb-collapse>
         </div>
@@ -80,7 +93,8 @@
 
 <script>
   import formMixins from '@/mixins/form'
-  import formatter from '@/filters/formatter.js'
+  import { PROPERTY_TYPES } from '@/dictionary/property-constants'
+
   export default {
     name: 'cmdb-details',
     mixins: [formMixins],
@@ -109,6 +123,10 @@
         type: Boolean,
         default: true
       },
+      showCopy: {
+        type: Boolean,
+        default: false
+      },
       editAuth: {
         type: Object,
         default: null
@@ -124,11 +142,17 @@
       invisibleNameProperties: {
         type: Array,
         default: () => []
+      },
+      invisibleProperties: {
+        type: Array,
+        default: () => []
       }
     },
     data() {
       return {
-        resizeEvent: null
+        resizeEvent: null,
+        showCopyTips: false,
+        PROPERTY_TYPES
       }
     },
     computed: {
@@ -140,22 +164,28 @@
       }
     },
     methods: {
-      handleToggleGroup(group) {
-        const groupId = group.bk_group_id
-        const collapse = !!this.groupState[groupId]
-        this.$set(this.groupState, groupId, !collapse)
-      },
-      getTitle(inst, property) {
-        return `${property.bk_property_name}: ${inst[property.bk_property_id] || '--'} ${property.unit}`
-      },
-      getValue(property) {
-        return formatter(this.inst[property.bk_property_id], property)
+      isShowOverflowTips(property) {
+        const complexTypes = ['map']
+        return !complexTypes.includes(property.bk_property_type)
       },
       handleEdit() {
         this.$emit('on-edit', this.inst)
       },
       handleDelete() {
         this.$emit('on-delete', this.inst)
+      },
+      handleCopy(propertyId) {
+        const [component] = this.$refs[`property-value-${propertyId}`]
+        const copyText = component?.getCopyValue() ?? ''
+        this.$copyText(copyText).then(() => {
+          this.showCopyTips = propertyId
+          const timer = setTimeout(() => {
+            this.showCopyTips = false
+            clearTimeout(timer)
+          }, 200)
+        }, () => {
+          this.$error(this.$t('复制失败'))
+        })
       }
     }
   }
@@ -199,21 +229,30 @@
             margin: 12px 0 0;
             font-size: 14px;
             line-height: 26px;
+            display: flex;
+
+            &:hover {
+                .property-copy {
+                    display: inline-block;
+                }
+            }
+
             .property-name {
                 position: relative;
-                width: 35%;
+                flex: none;
+                width: 140px;
                 padding: 0 16px 0 0;
                 color: #63656e;
                 text-align: right;
                 @include ellipsis;
-                &:after{
+                &:after {
                     content: ":";
                     position: absolute;
                     right: 10px;
                 }
             }
             .property-value {
-                width: 65%;
+                max-width: calc(100% - 140px - 24px);
                 padding: 0 15px 0 0;
                 color: #313238;
                 @include ellipsis;
@@ -230,11 +269,53 @@
                 }
             }
 
-            &.flex {
+            .property-copy {
+                margin: 2px 0 0 2px;
+                color: #3c96ff;
+                cursor: pointer;
+                display: none;
+                font-size: 16px;
+            }
+            .copy-box {
+                position: relative;
+                font-size: 0;
+                .copy-tips {
+                    position: absolute;
+                    top: -22px;
+                    left: -18px;
+                    min-width: 70px;
+                    height: 26px;
+                    line-height: 26px;
+                    font-size: 12px;
+                    color: #ffffff;
+                    text-align: center;
+                    background-color: #9f9f9f;
+                    border-radius: 2px;
+                }
+                .fade-enter-active, .fade-leave-active {
+                    transition: all 0.5s;
+                }
+                .fade-enter {
+                    top: -14px;
+                    opacity: 0;
+                }
+                .fade-leave-to {
+                    top: -28px;
+                    opacity: 0;
+                }
+            }
+
+            &.flex,
+            &.innertable {
                 display: flex;
                 width: 100%;
                 max-width: unset;
                 padding-right: 15px;
+
+                .property-value {
+                  width: calc(100% - 140px);
+                  max-width: 1200px;
+                }
             }
         }
     }

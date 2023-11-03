@@ -12,6 +12,9 @@ src/web*/cmdb_*
 .idea
 .DS_Store
 .vscode
+
+.pre-commit-config.yaml
+
 vendor
 dev
 scripts/cmdb_adminserver

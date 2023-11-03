@@ -25,16 +25,16 @@
         @click="handleChildClick(service)">
         <i class="node-icon fl">{{moduleName[0]}}</i>
         <span class="child-options fr" v-if="mode !== 'view'">
-          <bk-link class="action-link" @click="handleViewService(service)">查看详情</bk-link>
+          <bk-link class="action-link" @click="handleViewService(service)">{{$t('查看详情')}}</bk-link>
           <bk-popover v-if="serviceExistHost(service.id)">
-            <bk-link class="action-link disabled">删除</bk-link>
+            <bk-link class="action-link disabled">{{$t('删除')}}</bk-link>
             <i18n path="该模块下有主机不可删除" tag="p" class="service-tips" slot="content">
               <template #link><span @click="handleGoTopoBusiness(service)">{{$t('跳转查看')}}</span></template>
             </i18n>
           </bk-popover>
-          <bk-link v-else class="action-link" @click="handleDeleteService(index)">删除</bk-link>
+          <bk-link v-else class="action-link" @click="handleDeleteService(index)">{{$t('删除')}}</bk-link>
         </span>
-        <span class="child-name">{{service.name}}</span>
+        <span class="child-name" v-bk-overflow-tips>{{service.name}}</span>
       </li>
       <li class="options-child node-child clearfix"
         v-if="['create', 'edit'].includes(mode)"
@@ -46,7 +46,7 @@
     <bk-dialog
       header-position="left"
       :draggable="false"
-      :mask-close="false"
+      :mask-close="dialog.name !== 'add'"
       :width="840"
       :title="dialog.title"
       v-model="dialog.visible"
@@ -62,9 +62,12 @@
       <template slot="footer">
         <div class="dialog-footer" v-if="dialog.name === 'add'">
           <div class="summary" v-if="serviceTemplateCount > 0">
-            <span class="stat">
-              已选<em class="num">{{selectedServiceCount}}</em>个
-            </span>
+            <i18n path="已选个数">
+              <template #count>
+                <span class="stat">
+                  <em class="num">{{selectedServiceCount}}</em>
+                </span></template>
+            </i18n>
             <bk-link class="to-template" theme="primary" icon="icon-cc-share" @click="handleLinkClick">
               {{$t('跳转服务模板')}}
             </bk-link>

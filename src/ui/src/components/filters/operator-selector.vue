@@ -75,6 +75,8 @@
           bool: [EQ, NE],
           date: [GTE, LTE],
           enum: [IN, NIN],
+          enummulti: [IN, NIN],
+          enumquote: [IN, NIN],
           float: [EQ, NE, GT, LT, RANGE],
           int: [EQ, NE, GT, LT, RANGE],
           list: [IN, NIN],
@@ -86,7 +88,10 @@
           timezone: [IN, NIN],
           foreignkey: [IN, NIN],
           table: [IN, NIN],
-          'service-template': [IN]
+          'service-template': [IN],
+          array: [IN, NIN, LIKE],
+          object: [IN, NIN, LIKE],
+          map: [IN, NIN]
         }
 
         const typeMap = { ...defaultTypeMap, ...this.customTypeMap }

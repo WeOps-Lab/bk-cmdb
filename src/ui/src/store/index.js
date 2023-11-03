@@ -74,13 +74,16 @@ import resourceHost from './modules/view/resource-host.js'
 import cloudarea from './modules/api/cloudarea'
 import audit from './modules/api/audit.js'
 import dynamicGroup from './modules/api/dynamic-group'
+import versionLog from './modules/api/version-log'
 
 import globalConfig from './modules/global-config.js'
 import bizSet from './modules/biz-set.js'
 
+import fieldTemplate from './modules/view/field-template.js'
+
 Vue.use(Vuex)
 
-export default new Vuex.Store({
+const store = new Vuex.Store({
   ...global,
   modules: {
     index,
@@ -142,6 +145,12 @@ export default new Vuex.Store({
     cloudarea,
     organization,
     audit,
-    dynamicGroup
+    dynamicGroup,
+    versionLog,
+    fieldTemplate
   }
 })
+
+export const useStore = () => store
+
+export default store

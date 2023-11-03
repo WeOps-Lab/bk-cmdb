@@ -46,6 +46,9 @@ func GenerateStaticActionGroups() []ActionGroup {
 	// generate global settings action groups, contains global settings related actions
 	ActionGroups = append(ActionGroups, genGlobalSettingsActionGroups()...)
 
+	// generate container management action groups, contains container related actions
+	ActionGroups = append(ActionGroups, genContainerManagementActionGroups()...)
+
 	return ActionGroups
 }
 
@@ -236,6 +239,9 @@ func genResourceManageActionGroups() []ActionGroup {
 						{
 							ID: DeleteResourcePoolDirectory,
 						},
+						{
+							ID: ManageHostAgentID,
+						},
 					},
 				},
 				{
@@ -253,6 +259,21 @@ func genResourceManageActionGroups() []ActionGroup {
 						},
 						{
 							ID: FindBusiness,
+						},
+					},
+				},
+				{
+					Name:   "项目",
+					NameEn: "Project",
+					Actions: []ActionWithID{
+						{
+							ID: CreateProject,
+						},
+						{
+							ID: EditProject,
+						},
+						{
+							ID: DeleteProject,
 						},
 					},
 				},
@@ -311,7 +332,7 @@ func genResourceManageActionGroups() []ActionGroup {
 					},
 				},
 				{
-					Name:   "云区域",
+					Name:   "管控区域",
 					NameEn: "Cloud Area",
 					Actions: []ActionWithID{
 						{
@@ -359,6 +380,27 @@ func genResourceManageActionGroups() []ActionGroup {
 						{
 							ID: WatchBizSetEvent,
 						},
+						{
+							ID: WatchPlatEvent,
+						},
+						{
+							ID: WatchKubeClusterEvent,
+						},
+						{
+							ID: WatchKubeNodeEvent,
+						},
+						{
+							ID: WatchKubeNamespaceEvent,
+						},
+						{
+							ID: WatchKubeWorkloadEvent,
+						},
+						{
+							ID: WatchKubePodEvent,
+						},
+						{
+							ID: WatchProjectEvent,
+						},
 					},
 				},
 			},
@@ -376,57 +418,45 @@ func genModelManageActionGroups() []ActionGroup {
 					Name:   "模型分组",
 					NameEn: "Model Group",
 					Actions: []ActionWithID{
-						{
-							ID: CreateModelGroup,
-						},
-						{
-							ID: EditModelGroup,
-						},
-						{
-							ID: DeleteModelGroup,
-						},
+						{ID: CreateModelGroup},
+						{ID: EditModelGroup},
+						{ID: DeleteModelGroup},
 					},
 				},
 				{
 					Name:   "模型关系",
 					NameEn: "Model Relation",
 					Actions: []ActionWithID{
-						{
-							ID: EditBusinessLayer,
-						},
-						{
-							ID: EditModelTopologyView,
-						},
+						{ID: EditBusinessLayer},
+						{ID: EditModelTopologyView},
 					},
 				},
 				{
 					Name:   "模型",
 					NameEn: "Model",
 					Actions: []ActionWithID{
-						{
-							ID: CreateSysModel,
-						},
-						{
-							ID: EditSysModel,
-						},
-						{
-							ID: DeleteSysModel,
-						},
+						{ID: CreateSysModel},
+						{ID: EditSysModel},
+						{ID: DeleteSysModel},
 					},
 				},
 				{
 					Name:   "关联类型",
 					NameEn: "Association Type",
 					Actions: []ActionWithID{
-						{
-							ID: CreateAssociationType,
-						},
-						{
-							ID: EditAssociationType,
-						},
-						{
-							ID: DeleteAssociationType,
-						},
+						{ID: CreateAssociationType},
+						{ID: EditAssociationType},
+						{ID: DeleteAssociationType},
+					},
+				},
+				{
+					Name:   "字段组合模板",
+					NameEn: "Field Grouping Template",
+					Actions: []ActionWithID{
+						{ID: CreateFieldGroupingTemplate},
+						{ID: ViewFieldGroupingTemplate},
+						{ID: EditFieldGroupingTemplate},
+						{ID: DeleteFieldGroupingTemplate},
 					},
 				},
 			},
@@ -449,6 +479,85 @@ func GenModelInstanceManageActionGroups(objects []metadata.Object) []ActionGroup
 			Name:      "模型实例管理",
 			NameEn:    "Model instance Manage",
 			SubGroups: subGroups,
+		},
+	}
+}
+
+func genContainerManagementActionGroups() []ActionGroup {
+	return []ActionGroup{
+		{
+			Name:   "容器资源管理",
+			NameEn: "Container Management",
+			SubGroups: []ActionGroup{
+				{
+					Name:   "容器 Cluster",
+					NameEn: "Container Cluster",
+					Actions: []ActionWithID{
+						{
+							ID: CreateContainerCluster,
+						},
+						{
+							ID: EditContainerCluster,
+						},
+						{
+							ID: DeleteContainerCluster,
+						},
+					},
+				}, {
+					Name:   "容器 Node",
+					NameEn: "Container Node",
+					Actions: []ActionWithID{
+						{
+							ID: CreateContainerNode,
+						},
+						{
+							ID: EditContainerNode,
+						},
+						{
+							ID: DeleteContainerNode,
+						},
+					},
+				}, {
+					Name:   "容器命名空间",
+					NameEn: "Container Namespace",
+					Actions: []ActionWithID{
+						{
+							ID: CreateContainerNamespace,
+						},
+						{
+							ID: EditContainerNamespace,
+						},
+						{
+							ID: DeleteContainerNamespace,
+						},
+					},
+				}, {
+					Name:   "容器工作负载",
+					NameEn: "Container Workload",
+					Actions: []ActionWithID{
+						{
+							ID: CreateContainerWorkload,
+						},
+						{
+							ID: EditContainerWorkload,
+						},
+						{
+							ID: DeleteContainerWorkload,
+						},
+					},
+				}, {
+					Name:   "容器 Pod",
+					NameEn: "Container Pod",
+					Actions: []ActionWithID{
+						{
+							ID: CreateContainerPod,
+						},
+						{
+							ID: DeleteContainerPod,
+						},
+					},
+				},
+			},
 		},
 	}
 }

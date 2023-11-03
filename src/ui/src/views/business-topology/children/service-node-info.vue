@@ -30,6 +30,7 @@
       :properties="properties"
       :property-groups="propertyGroups"
       :inst="instance"
+      :show-copy="true"
       :show-options="modelId !== 'biz' && editable">
       <node-extra-info slot="prepend" :instance="instance"></node-extra-info>
       <template slot="details-options">
@@ -67,6 +68,7 @@
         :properties="properties"
         :property-groups="propertyGroups"
         :disabled-properties="disabledProperties"
+        :obj-id="modelId"
         :inst="instance"
         :type="type"
         :save-auth="{ type: $OPERATION.U_TOPO, relation: [business] }"
@@ -118,8 +120,8 @@
   import NodeExtraInfo from './node-extra-info'
   import FormServiceCategory from './form-service-category'
   import instanceService from '@/service/instance/instance'
-  import serviceTemplateService from '@/services/service-template'
-  import setTemplateService from '@/services/set-template'
+  import serviceTemplateService from '@/service/service-template'
+  import setTemplateService from '@/service/set-template'
   import { MENU_BUSINESS_SERVICE_TEMPLATE_DETAILS, MENU_BUSINESS_SET_TEMPLATE_DETAILS } from '@/dictionary/menu-symbol'
 
   export default {
@@ -418,6 +420,7 @@
         const nodeNameProperty = properties.find(property => property.bk_property_id === this.nodeNamePropertyId)
         properties.unshift({
           ...nodeNameProperty,
+          id: Date.now(),
           bk_property_id: this.nodePrimaryPropertyId,
           bk_property_name: this.$t('ID'),
           editable: false

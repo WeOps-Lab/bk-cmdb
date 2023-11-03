@@ -121,7 +121,10 @@
             :clearable="true"
             :right-icon="'bk-icon icon-search'"
             :placeholder="$t('请输入关键字')"
-            v-model.trim="modelSearchKey"
+            :value="modelSearchKey"
+            @change="inputChange"
+            @compositionstart.native="inputCompositionStart"
+            @compositionend.native="inputCompositionEnd"
           >
           </bk-input>
         </div>
@@ -137,11 +140,13 @@
       >
         <li
           class="group-item clearfix"
+          ref="classification"
           v-for="(classification, classIndex) in currentClassifications"
           :key="classIndex"
         >
           <div class="group-header clearfix">
             <collapse-group-title
+              :is-new-classify="classification.isNewClassify"
               :dropdown-menu="!isModelSelectable"
               :collapse=" classificationsCollapseState[classification.id]"
               :title="`${classification.bk_classification_name} ( ${ classification.bk_objects.length} )`"
@@ -242,12 +247,29 @@
               </div>
             </draggable>
           </bk-transition>
+          <bk-transition name="collapse" class="group-empty-model"
+            v-if="classification.bk_objects.length === 0"
+            v-show="!classificationsCollapseState[classification.id]">
+            <div>
+              <i class="bk-icon icon-info-circle"></i>
+              <i18n path="分组暂无模型提示">
+                <template #btn>
+                  <bk-button :text="true" title="primary" @click="showModelDialog(classification.bk_classification_id)">
+                    {{$t('立即添加')}}
+                  </bk-button>
+                </template>
+              </i18n>
+            </div>
+          </bk-transition>
         </li>
       </ul>
-      <no-search-results
+      <cmdb-data-empty
         v-if="!currentClassifications.length"
-        :text="$t('搜不到相关模型')"
-      />
+        slot="empty"
+        :stuff="dataEmpty"
+        @create="modelDialog.isShow = true"
+        @clear="handleClearFilter">
+      </cmdb-data-empty>
     </div>
 
     <div class="model-management-footer" v-show="isModelSelectable">
@@ -396,7 +418,6 @@
   import has from 'has'
   import theCreateModel from '@/components/model-manage/_create-model'
   import cmdbLoading from '@/components/loading/index.vue'
-  import noSearchResults from '@/views/status/no-search-results.vue'
   import CollapseGroupTitle from './children/collapse-group-title.vue'
   import { mapGetters, mapMutations, mapActions } from 'vuex'
   import debounce from 'lodash.debounce'
@@ -409,7 +430,6 @@
   } from '@/dictionary/menu-symbol'
   import { BUILTIN_MODEL_RESOURCE_MENUS, UNCATEGORIZED_GROUP_ID } from '@/dictionary/model-constants.js'
   import Bus from '@/utils/bus'
-
   export default {
     name: 'ModelManagement',
     filters: {
@@ -423,7 +443,6 @@
     },
     components: {
       theCreateModel,
-      noSearchResults,
       cmdbLoading,
       CollapseGroupTitle,
       Draggable,
@@ -439,6 +458,7 @@
         modelStatisticsSet: {}, // 模型实例数量统计
         curCreateModel: {}, // 当前创建的模型
         modelCreatedDialogVisible: false,
+        otherInputVal: '', // 针对某些输入法中文输入失焦后自动清空输入框情况 如：搜狗输入法
 
         // 分组表单弹窗
         groupDialog: {
@@ -479,7 +499,16 @@
          */
         importPaneVisible: false, // 导入面板是否显示
 
-        isTipsHidden: false // 模型管理提示是否隐藏
+        isTipsHidden: false, // 模型管理提示是否隐藏
+
+        dataEmpty: {
+          type: 'default',
+          payload: {
+            defaultText: this.$t('暂无模型'),
+            path: '暂无相关xxx',
+            resource: this.$t('模型'),
+          }
+        }
       }
     },
     computed: {
@@ -487,14 +516,16 @@
       ...mapGetters('objectModelClassify', ['classifications']),
       allClassifications() {
         const allClassifications = []
-        this.classifications.forEach((classification) => {
-          allClassifications.push({
-            ...classification,
-            bk_objects: classification.bk_objects
-              .filter(model => !model.bk_ishidden)
-              .sort((a, b) => a.bk_ispaused - b.bk_ispaused),
+        this.classifications
+          .filter(classification => !classification?.bk_ishidden)
+          .forEach((classification) => {
+            allClassifications.push({
+              ...classification,
+              bk_objects: classification.bk_objects
+                .filter(model => !model.bk_ishidden)
+                .sort((a, b) => a.bk_ispaused - b.bk_ispaused),
+            })
           })
-        })
         return allClassifications
       },
       enableClassifications() {
@@ -510,7 +541,7 @@
       disabledClassifications() {
         const disabledClassifications = []
 
-        this.classifications.forEach((classification) => {
+        this.allClassifications.forEach((classification) => {
           disabledClassifications.push({
             ...classification,
             bk_objects: classification.bk_objects.filter(model => model.bk_ispaused),
@@ -589,6 +620,8 @@
         }
 
         this.filterClassifications = searchResult.filter(item => item.bk_objects.length)
+
+        this.dataEmpty.type = this.modelSearchKey ? 'search' : 'default'
       },
       modelType() {
         this.modelSearchKey = ''
@@ -651,6 +684,26 @@
         'deleteClassification',
       ]),
       ...mapActions('objectModel', ['createObject', 'updateObject']),
+      inputChange(val) {
+        // 在输入过程中如果是中文输入法 不让modelSearchKey变化
+        if (this.isComposition) {
+          this.modelSearchKey = this.otherInputVal
+          return
+        }
+        this.modelSearchKey = val
+      },
+      inputCompositionStart() {
+        // 当前为中文输入法
+        this.isComposition = true
+        this.otherInputVal = this.modelSearchKey
+      },
+      inputCompositionEnd(event) {
+        // 兼容输入框输入中文突然变英文的情况
+        setTimeout(() => {
+          this.isComposition = false
+          this.modelSearchKey = event.target.value
+        }, 100)
+      },
       loadAllModels() {
         return this.searchClassificationsObjects({
           params: {},
@@ -924,25 +977,29 @@
           this.$http.cancelRequest(prevIndex)
         }
 
-        const result = await this.$store.dispatch(
-          'objectCommonInst/searchInstanceCount',
-          {
-            params: {
-              condition: { obj_ids: [modelId] },
-            },
-            config: {
-              requestId,
-              globalError: false,
-            },
-          }
-        )
+        try {
+          const result = await this.$store.dispatch(
+            'objectCommonInst/searchInstanceCount',
+            {
+              params: {
+                condition: { obj_ids: [modelId] },
+              },
+              config: {
+                requestId,
+                globalError: false,
+              },
+            }
+          )
 
-        const [data] = result
+          const [data] = result
 
-        this.$set(this.modelStatisticsSet, data.bk_obj_id, {
-          error: data.error,
-          inst_count: data.inst_count,
-        })
+          this.$set(this.modelStatisticsSet, data.bk_obj_id, {
+            error: data.error,
+            inst_count: data.inst_count,
+          })
+        } catch (err) {
+          console.error(err)
+        }
       },
       async saveGroup() {
         try {
@@ -967,17 +1024,19 @@
                 requestId: 'updateClassification'
               }
             })
-            this.updateClassify({ ...params, ...{ id: this.groupDialog.data.id } })
+            this.updateClassify({ ...params, ...{ id: this.groupDialog.data.id, isNewClassify: false } })
           } else {
             const res = await this.createClassification({
               params,
               config: { requestId: 'createClassification' }
             })
-            this.updateClassify({ ...params, ...{ id: res.id } })
+            this.updateClassify({ ...params, ...{ id: res.id, isNewClassify: true } })
             this.$success(this.$t('新建成功'))
           }
           this.hideGroupDialog()
           this.modelSearchKey = ''
+          const classificationDomList = this.$refs.classification.at(-2)
+          classificationDomList.scrollIntoView()
         } catch (error) {
           console.log(error)
         }
@@ -1038,6 +1097,9 @@
         } catch (error) {
           console.log(error)
         }
+      },
+      handleClearFilter() {
+        this.modelSearchKey = ''
       }
     },
   }

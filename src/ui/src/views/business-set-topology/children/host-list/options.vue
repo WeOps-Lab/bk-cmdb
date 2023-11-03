@@ -72,10 +72,10 @@
           id: this.IPWithCloudSymbol,
           bk_obj_id: BUILTIN_MODELS.HOST,
           bk_property_id: this.IPWithCloudSymbol,
-          bk_property_name: `${this.$t('云区域')}ID:IP`,
+          bk_property_name: `${this.$t('管控区域')}ID:IP`,
           bk_property_type: 'singlechar'
         })
-        const clipboardList = FilterStore.header.slice()
+        const clipboardList = this.$parent.tableHeader.slice()
         clipboardList.splice(1, 0, IPWithCloud)
         return clipboardList
       },

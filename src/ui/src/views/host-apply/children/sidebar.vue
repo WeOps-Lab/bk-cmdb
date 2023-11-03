@@ -25,7 +25,7 @@
       </div>
       <div class="searchbar">
         <div class="search-select">
-          <search-select-mix :mode="configMode" />
+          <search-select-mix :mode="configMode" ref="searchSelect" />
         </div>
         <div class="action-menu" v-show="!actionMode">
           <bk-dropdown-menu
@@ -120,7 +120,7 @@
   import batchCheckPanel from './batch-check-panel.vue'
   import { MENU_BUSINESS_HOST_APPLY_EDIT } from '@/dictionary/menu-symbol'
   import { mapGetters } from 'vuex'
-  import { CONFIG_MODE } from '@/services/service-template/index.js'
+  import { CONFIG_MODE } from '@/service/service-template/index.js'
   export default {
     components: {
       searchSelectMix,
@@ -169,7 +169,8 @@
             },
             events: {
               selected: this.handleTreeSelected,
-              checked: this.handleTreeChecked
+              checked: this.handleTreeChecked,
+              clearFilter: this.handleclearFilter
             }
           },
           [CONFIG_MODE.TEMPLATE]: {
@@ -180,7 +181,8 @@
             },
             events: {
               selected: this.handleTreeSelected,
-              checked: this.handleTemplateChecked
+              checked: this.handleTemplateChecked,
+              clearFilter: this.handleclearFilter
             }
           }
         }
@@ -290,6 +292,10 @@
         this.treeOptions.checkOnlyAvailableStrictly = false
         this.actionMode = ''
         this.removeChecked()
+      },
+      handleclearFilter() {
+        this.$refs.searchSelect.setEmptyKeyword()
+        this.$refs.searchSelect.clearInputAll()
       }
     }
   }

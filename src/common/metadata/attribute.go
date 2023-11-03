@@ -30,6 +30,7 @@ import (
 
 	"github.com/tidwall/gjson"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 const (
@@ -77,6 +78,18 @@ const (
 	AttributeFieldCreateTime = "create_time"
 	// AttributeFieldLastTime TODO
 	AttributeFieldLastTime = "last_time"
+	// AttributeFieldDefault attribute default value field
+	AttributeFieldDefault = "default"
+)
+
+const (
+	// TableLongCharMaxNum the maximum number of long
+	// characters supported by a form field.
+	TableLongCharMaxNum = 2
+	// TableHeaderMaxNum the maximum length of the table header field.
+	TableHeaderMaxNum = 8
+	// TableDefaultMaxLines the maximum length of the table default lines.
+	TableDefaultMaxLines = 10
 )
 
 // Attribute attribute metadata definition
@@ -94,14 +107,17 @@ type Attribute struct {
 	Placeholder       string      `field:"placeholder" json:"placeholder" bson:"placeholder" mapstructure:"placeholder"`
 	IsEditable        bool        `field:"editable" json:"editable" bson:"editable" mapstructure:"editable"`
 	IsPre             bool        `field:"ispre" json:"ispre" bson:"ispre" mapstructure:"ispre"`
-	IsRequired        bool        `field:"isrequired" json:"isrequired" bson:"isrequired" mapstructure:"ispre"`
+	IsRequired        bool        `field:"isrequired" json:"isrequired" bson:"isrequired" mapstructure:"isrequired"`
 	IsReadOnly        bool        `field:"isreadonly" json:"isreadonly" bson:"isreadonly" mapstructure:"isreadonly"`
 	IsOnly            bool        `field:"isonly" json:"isonly" bson:"isonly" mapstructure:"isonly"`
 	IsSystem          bool        `field:"bk_issystem" json:"bk_issystem" bson:"bk_issystem" mapstructure:"bk_issystem"`
 	IsAPI             bool        `field:"bk_isapi" json:"bk_isapi" bson:"bk_isapi" mapstructure:"bk_isapi"`
 	PropertyType      string      `field:"bk_property_type" json:"bk_property_type" bson:"bk_property_type" mapstructure:"bk_property_type"`
 	Option            interface{} `field:"option" json:"option" bson:"option" mapstructure:"option"`
+	Default           interface{} `field:"default" json:"default,omitempty" bson:"default" mapstructure:"default"`
+	IsMultiple        *bool       `field:"ismultiple" json:"ismultiple,omitempty" bson:"ismultiple" mapstructure:"ismultiple"`
 	Description       string      `field:"description" json:"description" bson:"description" mapstructure:"description"`
+	TemplateID        int64       `field:"bk_template_id" json:"bk_template_id" bson:"bk_template_id" mapstructure:"bk_template_id"`
 	Creator           string      `field:"creator" json:"creator" bson:"creator" mapstructure:"creator"`
 	CreateTime        *Time       `json:"create_time" bson:"create_time" mapstructure:"create_time"`
 	LastTime          *Time       `json:"last_time" bson:"last_time" mapstructure:"last_time"`
@@ -148,7 +164,8 @@ type HostObjAttDes struct {
 }
 
 // Validate TODO
-func (attribute *Attribute) Validate(ctx context.Context, data interface{}, key string) (rawError errors.RawErrorInfo) {
+func (attribute *Attribute) Validate(ctx context.Context, data interface{}, key string) errors.RawErrorInfo {
+	rawError := errors.RawErrorInfo{}
 	fieldType := attribute.PropertyType
 	switch fieldType {
 	case common.FieldTypeSingleChar:
@@ -161,6 +178,10 @@ func (attribute *Attribute) Validate(ctx context.Context, data interface{}, key 
 		rawError = attribute.validFloat(ctx, data, key)
 	case common.FieldTypeEnum:
 		rawError = attribute.validEnum(ctx, data, key)
+	case common.FieldTypeEnumMulti:
+		rawError = attribute.validEnumMulti(ctx, data, key)
+	case common.FieldTypeEnumQuote:
+		rawError = attribute.validEnumQuote(ctx, data, key)
 	case common.FieldTypeDate:
 		rawError = attribute.validDate(ctx, data, key)
 	case common.FieldTypeTime:
@@ -182,6 +203,8 @@ func (attribute *Attribute) Validate(ctx context.Context, data interface{}, key 
 	case common.FieldTypeTable:
 		// TODO what validation should do on these types
 		rawError = attribute.validTable(ctx, data, key)
+	case common.FieldTypeInnerTable:
+		rawError = attribute.validInnerTable(ctx, data, key)
 	default:
 		rawError = errors.RawErrorInfo{
 			ErrCode: common.CCErrCommUnexpectedFieldType,
@@ -198,10 +221,10 @@ func (attribute *Attribute) Validate(ctx context.Context, data interface{}, key 
 }
 
 // validTime valid object Attribute that is time type
-func (attribute *Attribute) validTime(ctx context.Context, val interface{}, key string) (rawError errors.RawErrorInfo) {
+func (attribute *Attribute) validTime(ctx context.Context, val interface{}, key string) errors.RawErrorInfo {
 
 	rid := util.ExtractRequestIDFromContext(ctx)
-	if nil == val || "" == val {
+	if val == nil || val == "" {
 		if attribute.IsRequired {
 			blog.Errorf("params can not be null, rid: %s", rid)
 			return errors.RawErrorInfo{
@@ -213,35 +236,25 @@ func (attribute *Attribute) validTime(ctx context.Context, val interface{}, key 
 		return errors.RawErrorInfo{}
 	}
 
-	_, ok := val.(time.Time)
-	if ok {
+	if _, ok := val.(time.Time); ok {
 		return errors.RawErrorInfo{}
 	}
 
-	valStr, ok := val.(string)
-	if false == ok {
-		blog.Errorf("date can should be string, rid: %s", rid)
-		return errors.RawErrorInfo{
-			ErrCode: common.CCErrCommParamsShouldBeString,
-			Args:    []interface{}{key},
-		}
-	}
-
-	_, result := util.IsTime(valStr)
-	if !result {
+	if _, result := util.IsTime(val); !result {
 		blog.Errorf("params not valid, rid: %s", rid)
 		return errors.RawErrorInfo{
 			ErrCode: common.CCErrCommParamsInvalid,
 			Args:    []interface{}{key},
 		}
 	}
+
 	return errors.RawErrorInfo{}
 }
 
 // validDate valid object Attribute that is date type
-func (attribute *Attribute) validDate(ctx context.Context, val interface{}, key string) (rawError errors.RawErrorInfo) {
+func (attribute *Attribute) validDate(ctx context.Context, val interface{}, key string) errors.RawErrorInfo {
 	rid := util.ExtractRequestIDFromContext(ctx)
-	if nil == val || "" == val {
+	if val == nil || val == "" {
 		if attribute.IsRequired {
 			blog.Errorf("params can not be null, rid: %s", rid)
 			return errors.RawErrorInfo{
@@ -252,31 +265,23 @@ func (attribute *Attribute) validDate(ctx context.Context, val interface{}, key 
 		}
 		return errors.RawErrorInfo{}
 	}
-	valStr, ok := val.(string)
-	if false == ok {
-		blog.Errorf("date can should be string, rid: %s", rid)
-		return errors.RawErrorInfo{
-			ErrCode: common.CCErrCommParamsShouldBeString,
-			Args:    []interface{}{key},
-		}
 
-	}
-	result := util.IsDate(valStr)
-	if !result {
+	if result := util.IsDate(val); !result {
 		blog.Errorf("params is not valid, rid: %s", rid)
 		return errors.RawErrorInfo{
 			ErrCode: common.CCErrCommParamsInvalid,
 			Args:    []interface{}{key},
 		}
 	}
+
 	return errors.RawErrorInfo{}
 }
 
 // validEnum valid object attribute that is enum type
-func (attribute *Attribute) validEnum(ctx context.Context, val interface{}, key string) (rawError errors.RawErrorInfo) {
+func (attribute *Attribute) validEnum(ctx context.Context, val interface{}, key string) errors.RawErrorInfo {
 	rid := util.ExtractRequestIDFromContext(ctx)
 	// validate require
-	if nil == val {
+	if val == nil {
 		if attribute.IsRequired {
 			blog.Errorf("params can not be null, rid: %s", rid)
 			return errors.RawErrorInfo{
@@ -300,7 +305,7 @@ func (attribute *Attribute) validEnum(ctx context.Context, val interface{}, key 
 	// validate within enum
 	enumOption, err := ParseEnumOption(ctx, attribute.Option)
 	if err != nil {
-		blog.Warnf("ParseEnumOption failed: %v, rid: %s", err, rid)
+		blog.Warnf("parse enum option failed, err: %v, rid: %s", err, rid)
 		return errors.RawErrorInfo{
 			ErrCode: common.CCErrCommParamsInvalid,
 			Args:    []interface{}{key},
@@ -311,7 +316,8 @@ func (attribute *Attribute) validEnum(ctx context.Context, val interface{}, key 
 			return errors.RawErrorInfo{}
 		}
 	}
-	blog.V(3).Infof("params %s not valid, option %#v, raw option %#v, value: %#v, rid: %s", key, enumOption, attribute.Option, val, rid)
+	blog.V(3).Infof("params %s not valid, option %#v, raw option %#v, value: %#v, rid: %s", key, enumOption,
+		attribute.Option, val, rid)
 	blog.Errorf("params %s not valid , enum value: %#v, rid: %s", key, val, rid)
 	return errors.RawErrorInfo{
 		ErrCode: common.CCErrCommParamsInvalid,
@@ -319,10 +325,121 @@ func (attribute *Attribute) validEnum(ctx context.Context, val interface{}, key 
 	}
 }
 
-// validBool valid object attribute that is bool type
-func (attribute *Attribute) validBool(ctx context.Context, val interface{}, key string) (rawError errors.RawErrorInfo) {
+// validEnum valid object attribute that is enum multi type
+func (attribute *Attribute) validEnumMulti(ctx context.Context, val interface{}, key string) errors.RawErrorInfo {
 	rid := util.ExtractRequestIDFromContext(ctx)
-	if nil == val {
+	// validate require
+	if val == nil {
+		if attribute.IsRequired {
+			blog.Errorf("params can not be null, rid: %s", rid)
+			return errors.RawErrorInfo{
+				ErrCode: common.CCErrCommParamsNeedSet,
+				Args:    []interface{}{key},
+			}
+		}
+		return errors.RawErrorInfo{}
+	}
+
+	enumOption, err := ParseEnumOption(ctx, attribute.Option)
+	if err != nil {
+		blog.Errorf("parse enum option failed, err: %v, rid: %s", err, rid)
+		return errors.RawErrorInfo{
+			ErrCode: common.CCErrCommParamsInvalid,
+			Args:    []interface{}{key},
+		}
+	}
+
+	idMap := make(map[string]struct{}, 0)
+	for _, option := range enumOption {
+		idMap[option.ID] = struct{}{}
+	}
+
+	valIDs, ok := val.([]interface{})
+	if !ok {
+		blog.Errorf("convert val to interface slice failed, val type: %T", val)
+		return errors.RawErrorInfo{
+			ErrCode: common.CCErrCommParamsInvalid,
+			Args:    []interface{}{key},
+		}
+	}
+
+	if len(valIDs) == 0 && attribute.IsRequired {
+		blog.Errorf("data must be set, rid: %s", rid)
+		return errors.RawErrorInfo{
+			ErrCode: common.CCErrCommParamsInvalid,
+			Args:    []interface{}{key},
+		}
+	}
+
+	if len(valIDs) == 0 {
+		return errors.RawErrorInfo{}
+	}
+
+	if attribute.IsMultiple == nil {
+		blog.Errorf("multi flag must be set, rid: %s", rid)
+		return errors.RawErrorInfo{ErrCode: common.CCErrCommParamsNeedSet, Args: []interface{}{key}}
+	}
+
+	if !(*attribute.IsMultiple) && len(valIDs) != 1 {
+		blog.Errorf("multiple values are not allowed, valIDs: %+v, rid: %s", valIDs, rid)
+		return errors.RawErrorInfo{
+			ErrCode: common.CCErrCommParamsNeedSingleChoice,
+			Args:    []interface{}{key},
+		}
+	}
+	for _, id := range valIDs {
+		idVal, ok := id.(string)
+		if !ok {
+			blog.Errorf("data must be string id: %v, rid: %s", id, rid)
+			return errors.RawErrorInfo{
+				ErrCode: common.CCErrCommParamsInvalid,
+				Args:    []interface{}{key},
+			}
+		}
+		if _, ok := idMap[idVal]; !ok {
+			blog.Errorf("value entered must be in the enumerated list，id: %s, rid: %s", id, rid)
+			return errors.RawErrorInfo{
+				ErrCode: common.CCErrCommParamsInvalid,
+				Args:    []interface{}{key},
+			}
+		}
+	}
+
+	return errors.RawErrorInfo{}
+}
+
+// validEnum valid object attribute that is enum quote type
+func (attribute *Attribute) validEnumQuote(ctx context.Context, val interface{}, key string) errors.RawErrorInfo {
+	rid := util.ExtractRequestIDFromContext(ctx)
+	// validate require
+	if val == nil {
+		if attribute.IsRequired {
+			blog.Errorf("params can not be null, rid: %s", rid)
+			return errors.RawErrorInfo{
+				ErrCode: common.CCErrCommParamsNeedSet,
+				Args:    []interface{}{key},
+			}
+		}
+		return errors.RawErrorInfo{}
+	}
+
+	switch val.(type) {
+	case []interface{}:
+	case bson.A:
+	default:
+		blog.Errorf("params should be type enum quote, but its type is %T, rid: %s", val, rid)
+		return errors.RawErrorInfo{
+			ErrCode: common.CCErrCommParamsInvalid,
+			Args:    []interface{}{key},
+		}
+	}
+	return errors.RawErrorInfo{}
+}
+
+// validBool valid object attribute that is bool type
+func (attribute *Attribute) validBool(ctx context.Context, val interface{}, key string) errors.RawErrorInfo {
+	rid := util.ExtractRequestIDFromContext(ctx)
+	if val == nil {
 		if attribute.IsRequired {
 			blog.Errorf("params can not be null, rid: %s", rid)
 			return errors.RawErrorInfo{
@@ -346,11 +463,10 @@ func (attribute *Attribute) validBool(ctx context.Context, val interface{}, key 
 	return errors.RawErrorInfo{}
 }
 
-// validTimeZone TODO
-// valid char valid object attribute that is timezone type
-func (attribute *Attribute) validTimeZone(ctx context.Context, val interface{}, key string) (rawError errors.RawErrorInfo) {
+// validTimeZone valid char valid object attribute that is timezone type
+func (attribute *Attribute) validTimeZone(ctx context.Context, val interface{}, key string) errors.RawErrorInfo {
 	rid := util.ExtractRequestIDFromContext(ctx)
-	if nil == val {
+	if val == nil {
 		if attribute.IsRequired {
 			blog.Errorf("params can not be null, rid: %s", rid)
 			return errors.RawErrorInfo{
@@ -362,30 +478,21 @@ func (attribute *Attribute) validTimeZone(ctx context.Context, val interface{}, 
 		return errors.RawErrorInfo{}
 	}
 
-	switch value := val.(type) {
-	case string:
-		isMatch := util.IsTimeZone(value)
-		if false == isMatch {
-			blog.Errorf("params should be timezone, rid: %s", rid)
-			return errors.RawErrorInfo{
-				ErrCode: common.CCErrCommParamsNeedTimeZone,
-				Args:    []interface{}{key},
-			}
-		}
-	default:
+	if ok := util.IsTimeZone(val); !ok {
 		blog.Errorf("params should be timezone, rid: %s", rid)
 		return errors.RawErrorInfo{
 			ErrCode: common.CCErrCommParamsNeedTimeZone,
 			Args:    []interface{}{key},
 		}
 	}
+
 	return errors.RawErrorInfo{}
 }
 
 // validInt valid object attribute that is int type
-func (attribute *Attribute) validInt(ctx context.Context, val interface{}, key string) (rawError errors.RawErrorInfo) {
+func (attribute *Attribute) validInt(ctx context.Context, val interface{}, key string) errors.RawErrorInfo {
 	rid := util.ExtractRequestIDFromContext(ctx)
-	if nil == val {
+	if val == nil {
 		if attribute.IsRequired {
 			blog.Errorf("params can not be null, rid: %s", rid)
 			return errors.RawErrorInfo{
@@ -405,21 +512,21 @@ func (attribute *Attribute) validInt(ctx context.Context, val interface{}, key s
 		}
 	}
 
-	value, _ := util.GetInt64ByInterface(val)
-
 	intObjOption := ParseIntOption(ctx, attribute.Option)
-	if 0 == len(intObjOption.Min) || 0 == len(intObjOption.Max) {
+	if len(intObjOption.Min) == 0 || len(intObjOption.Max) == 0 {
 		return errors.RawErrorInfo{}
 	}
 
 	maxValue, err := strconv.ParseInt(intObjOption.Max, 10, 64)
-	if nil != err {
+	if err != nil {
 		maxValue = common.MaxInt64
 	}
 	minValue, err := strconv.ParseInt(intObjOption.Min, 10, 64)
-	if nil != err {
+	if err != nil {
 		minValue = common.MinInt64
 	}
+
+	value, _ := util.GetInt64ByInterface(val)
 	if value > maxValue || value < minValue {
 		blog.Errorf("params %s:%#v not valid, rid: %s", key, val, rid)
 		return errors.RawErrorInfo{
@@ -431,9 +538,9 @@ func (attribute *Attribute) validInt(ctx context.Context, val interface{}, key s
 }
 
 // validFloat valid object attribute that is float type
-func (attribute *Attribute) validFloat(ctx context.Context, val interface{}, key string) (rawError errors.RawErrorInfo) {
+func (attribute *Attribute) validFloat(ctx context.Context, val interface{}, key string) errors.RawErrorInfo {
 	rid := util.ExtractRequestIDFromContext(ctx)
-	if nil == val {
+	if val == nil {
 		if attribute.IsRequired {
 			blog.Errorf("params can not be null, rid: %s", rid)
 			return errors.RawErrorInfo{
@@ -447,7 +554,7 @@ func (attribute *Attribute) validFloat(ctx context.Context, val interface{}, key
 
 	var value float64
 	value, err := util.GetFloat64ByInterface(val)
-	if nil != err {
+	if err != nil {
 		blog.Errorf("params %s:%#v not float, rid: %s", key, val, rid)
 		return errors.RawErrorInfo{
 			ErrCode: common.CCErrCommParamsIsInvalid,
@@ -456,18 +563,19 @@ func (attribute *Attribute) validFloat(ctx context.Context, val interface{}, key
 	}
 
 	intObjOption := parseFloatOption(ctx, attribute.Option)
-	if 0 == len(intObjOption.Min) || 0 == len(intObjOption.Max) {
+	if len(intObjOption.Min) == 0 || len(intObjOption.Max) == 0 {
 		return errors.RawErrorInfo{}
 	}
 
 	maxValue, err := strconv.ParseFloat(intObjOption.Max, 64)
-	if nil != err {
+	if err != nil {
 		maxValue = float64(common.MaxInt64)
 	}
 	minValue, err := strconv.ParseFloat(intObjOption.Min, 64)
-	if nil != err {
+	if err != nil {
 		minValue = float64(common.MinInt64)
 	}
+
 	if value > maxValue || value < minValue {
 		blog.Errorf("params %s:%#v not valid, rid: %s", key, val, rid)
 		return errors.RawErrorInfo{
@@ -479,9 +587,9 @@ func (attribute *Attribute) validFloat(ctx context.Context, val interface{}, key
 }
 
 // validLongChar valid object attribute that is long char type
-func (attribute *Attribute) validLongChar(ctx context.Context, val interface{}, key string) (rawError errors.RawErrorInfo) {
+func (attribute *Attribute) validLongChar(ctx context.Context, val interface{}, key string) errors.RawErrorInfo {
 	rid := util.ExtractRequestIDFromContext(ctx)
-	if nil == val || "" == val {
+	if val == nil || val == "" {
 		if attribute.IsRequired {
 			blog.Errorf("params in need, rid: %s", rid)
 			return errors.RawErrorInfo{
@@ -503,7 +611,7 @@ func (attribute *Attribute) validLongChar(ctx context.Context, val interface{}, 
 				Args:    []interface{}{key},
 			}
 		}
-		if 0 == len(value) {
+		if len(value) == 0 {
 			if attribute.IsRequired {
 				blog.Errorf("params can not be empty, rid: %s", rid)
 				return errors.RawErrorInfo{
@@ -519,8 +627,8 @@ func (attribute *Attribute) validLongChar(ctx context.Context, val interface{}, 
 			break
 		}
 		strReg, err := regexp.Compile(option)
-		if nil != err {
-			blog.Errorf(`regexp "%s" invalid, err: %s, rid:  %s`, option, err.Error(), rid)
+		if err != nil {
+			blog.Errorf(`regexp "%s" invalid, err: %v, rid: %s`, option, err, rid)
 			return errors.RawErrorInfo{
 				ErrCode: common.CCErrCommParamsIsInvalid,
 				Args:    []interface{}{option},
@@ -545,9 +653,9 @@ func (attribute *Attribute) validLongChar(ctx context.Context, val interface{}, 
 }
 
 // validChar valid object attribute that is char type
-func (attribute *Attribute) validChar(ctx context.Context, val interface{}, key string) (rawError errors.RawErrorInfo) {
+func (attribute *Attribute) validChar(ctx context.Context, val interface{}, key string) errors.RawErrorInfo {
 	rid := util.ExtractRequestIDFromContext(ctx)
-	if nil == val {
+	if val == nil {
 		if attribute.IsRequired {
 			blog.Errorf("params in need, rid: %s", rid)
 			return errors.RawErrorInfo{
@@ -557,6 +665,7 @@ func (attribute *Attribute) validChar(ctx context.Context, val interface{}, key 
 		}
 		return errors.RawErrorInfo{}
 	}
+
 	switch value := val.(type) {
 	case string:
 		value = strings.TrimSpace(value)
@@ -567,7 +676,7 @@ func (attribute *Attribute) validChar(ctx context.Context, val interface{}, key 
 				Args:    []interface{}{key},
 			}
 		}
-		if 0 == len(value) {
+		if len(value) == 0 {
 			if attribute.IsRequired {
 				blog.Errorf("params can not be empty, rid: %s", rid)
 				return errors.RawErrorInfo{
@@ -580,7 +689,7 @@ func (attribute *Attribute) validChar(ctx context.Context, val interface{}, key 
 
 		if key == common.BKAppNameField || key == common.BKSetNameField || key == common.BKModuleNameField {
 			if strings.Contains(value, "##") {
-				blog.ErrorJSON("params %s contains TopoModuleName's split flag ##, rid: %s", value, rid)
+				blog.Errorf("params %s contains TopoModuleName's split flag ##, rid: %s", value, rid)
 				return errors.RawErrorInfo{
 					ErrCode: common.CCErrCommParamsInvalid,
 					Args:    []interface{}{value},
@@ -588,7 +697,7 @@ func (attribute *Attribute) validChar(ctx context.Context, val interface{}, key 
 			}
 		}
 
-		if "" == val {
+		if val == "" {
 			return errors.RawErrorInfo{}
 		}
 
@@ -597,8 +706,8 @@ func (attribute *Attribute) validChar(ctx context.Context, val interface{}, key 
 			break
 		}
 		strReg, err := regexp.Compile(option)
-		if nil != err {
-			blog.Errorf(`regexp "%s" invalid, err: %s, rid:  %s`, option, err.Error(), rid)
+		if err != nil {
+			blog.Errorf(`regexp "%s" invalid, err: %v, rid: %s`, option, err, rid)
 			return errors.RawErrorInfo{
 				ErrCode: common.CCErrCommParamsIsInvalid,
 				Args:    []interface{}{option},
@@ -623,9 +732,9 @@ func (attribute *Attribute) validChar(ctx context.Context, val interface{}, key 
 }
 
 // validUser valid object attribute that is user type
-func (attribute *Attribute) validUser(ctx context.Context, val interface{}, key string) (rawError errors.RawErrorInfo) {
+func (attribute *Attribute) validUser(ctx context.Context, val interface{}, key string) errors.RawErrorInfo {
 	rid := util.ExtractRequestIDFromContext(ctx)
-	if nil == val || "" == val {
+	if val == nil || val == "" {
 		if attribute.IsRequired {
 			blog.Errorf("params in need, rid: %s", rid)
 			return errors.RawErrorInfo{
@@ -648,7 +757,7 @@ func (attribute *Attribute) validUser(ctx context.Context, val interface{}, key 
 			}
 		}
 
-		if 0 == len(value) {
+		if len(value) == 0 {
 			if attribute.IsRequired {
 				blog.Errorf("params can not be empty, rid: %s", rid)
 				return errors.RawErrorInfo{
@@ -657,6 +766,20 @@ func (attribute *Attribute) validUser(ctx context.Context, val interface{}, key 
 				}
 			}
 			return errors.RawErrorInfo{}
+		}
+
+		if attribute.IsMultiple == nil {
+			return errors.RawErrorInfo{
+				ErrCode: common.CCErrCommParamsNeedSet,
+				Args:    []interface{}{key},
+			}
+		}
+
+		if !(*attribute.IsMultiple) && len(strings.Split(value, ",")) != 1 {
+			return errors.RawErrorInfo{
+				ErrCode: common.CCErrCommParamsInvalid,
+				Args:    []interface{}{key},
+			}
 		}
 
 		// regex check
@@ -680,11 +803,10 @@ func (attribute *Attribute) validUser(ctx context.Context, val interface{}, key 
 }
 
 // validObjectCondition valid object attribute that is user type
-func (attribute *Attribute) validObjectCondition(ctx context.Context, val interface{}, key string) (
-	rawError errors.RawErrorInfo) {
+func (attribute *Attribute) validObjectCondition(ctx context.Context, val interface{}, key string) errors.RawErrorInfo {
 
 	rid := util.ExtractRequestIDFromContext(ctx)
-	if nil == val || "" == val {
+	if val == nil || val == "" {
 		if attribute.IsRequired {
 			blog.Errorf("params in need, rid: %s", rid)
 			return errors.RawErrorInfo{
@@ -695,6 +817,7 @@ func (attribute *Attribute) validObjectCondition(ctx context.Context, val interf
 		}
 		return errors.RawErrorInfo{}
 	}
+
 	// 对于对象的校验只需要判断类型是否是map[string]interface和MapStr即可
 
 	switch reflect.TypeOf(val).Kind() {
@@ -703,7 +826,8 @@ func (attribute *Attribute) validObjectCondition(ctx context.Context, val interf
 		switch reflect.TypeOf(val).Elem().Kind() {
 		case reflect.Map:
 		default:
-			blog.Errorf("object type is error, must be map, type: %v, rid: %s", reflect.TypeOf(val).Elem().Kind(), rid)
+			blog.Errorf("object type is error, must be map, type: %v, rid: %s", reflect.TypeOf(val).Elem().Kind(),
+				rid)
 			return errors.RawErrorInfo{
 				ErrCode: common.CCErrCommParamsInvalid,
 				Args:    []interface{}{key},
@@ -721,10 +845,10 @@ func (attribute *Attribute) validObjectCondition(ctx context.Context, val interf
 	return errors.RawErrorInfo{}
 }
 
-func (attribute *Attribute) validList(ctx context.Context, val interface{}, key string) (rawError errors.RawErrorInfo) {
+func (attribute *Attribute) validList(ctx context.Context, val interface{}, key string) errors.RawErrorInfo {
 	rid := util.ExtractRequestUserFromContext(ctx)
 
-	if nil == val {
+	if val == nil {
 		if attribute.IsRequired {
 			blog.Error("params can not be null, list field key: %s, rid: %s", key, rid)
 			return errors.RawErrorInfo{
@@ -750,7 +874,8 @@ func (attribute *Attribute) validList(ctx context.Context, val interface{}, key 
 	case bson.A:
 		listOpt = listOption
 	default:
-		blog.Errorf("option %v invalid, not string type list option, but type %T", attribute.Option, attribute.Option)
+		blog.Errorf("option %v invalid, not string type list option, but type %T, rid: %s", attribute.Option,
+			attribute.Option, rid)
 		return errors.RawErrorInfo{
 			ErrCode: common.CCErrCommParamsInvalid,
 			Args:    []interface{}{key},
@@ -760,7 +885,8 @@ func (attribute *Attribute) validList(ctx context.Context, val interface{}, key 
 	for _, inVal := range listOpt {
 		inValStr, ok := inVal.(string)
 		if !ok {
-			blog.Errorf("inner list option convert to string  failed, params %s not valid , list field value: %#v", key, val)
+			blog.Errorf("inner list option convert to string failed, params %s not valid , list field value: %#v, "+
+				"rid: %s", key, val, rid)
 			return errors.RawErrorInfo{
 				ErrCode: common.CCErrParseAttrOptionListFailed,
 				Args:    []interface{}{key},
@@ -770,45 +896,84 @@ func (attribute *Attribute) validList(ctx context.Context, val interface{}, key 
 			return errors.RawErrorInfo{}
 		}
 	}
-	blog.Errorf("params %s not valid, option %#v, raw option %#v, value: %#v", key, listOpt, attribute, val)
+	blog.Errorf("params %s not valid, option %#v, raw option %#v, value: %#v, rid: %s", key, listOpt, attribute,
+		val, rid)
 	return errors.RawErrorInfo{
 		ErrCode: common.CCErrCommParamsInvalid,
 		Args:    []interface{}{key},
 	}
 }
 
-// validOrganization TODO
-// validBool valid object attribute that is bool type
-func (attribute *Attribute) validOrganization(ctx context.Context, val interface{}, key string) (rawError errors.RawErrorInfo) {
+// validOrganization valid object attribute that is organization type
+func (attribute *Attribute) validOrganization(ctx context.Context, val interface{}, key string) errors.RawErrorInfo {
 	rid := util.ExtractRequestIDFromContext(ctx)
-	if nil == val {
+	if val == nil {
 		if attribute.IsRequired {
 			blog.Errorf("params can not be null, rid: %s", rid)
-			return errors.RawErrorInfo{
-				ErrCode: common.CCErrCommParamsNeedSet,
-				Args:    []interface{}{key},
-			}
-
+			return errors.RawErrorInfo{ErrCode: common.CCErrCommParamsNeedSet, Args: []interface{}{key}}
 		}
+
 		return errors.RawErrorInfo{}
 	}
 
-	switch val.(type) {
+	switch org := val.(type) {
 	case []interface{}:
+		if len(org) == 0 && attribute.IsRequired {
+			blog.Errorf("org is required, but is null, rid: %s", rid)
+			return errors.RawErrorInfo{ErrCode: common.CCErrCommParamsInvalid, Args: []interface{}{key}}
+		}
+
+		if len(org) == 0 {
+			return errors.RawErrorInfo{}
+		}
+
+		if attribute.IsMultiple == nil {
+			return errors.RawErrorInfo{ErrCode: common.CCErrCommParamsNeedSet, Args: []interface{}{key}}
+		}
+
+		if !(*attribute.IsMultiple) && len(org) != 1 {
+			return errors.RawErrorInfo{ErrCode: common.CCErrCommParamsInvalid, Args: []interface{}{key}}
+		}
+
+		for _, orgID := range org {
+			if !util.IsInteger(orgID) {
+				blog.Errorf("orgID params not int, type: %T, rid: %s", orgID, rid)
+				return errors.RawErrorInfo{ErrCode: common.CCErrCommParamsIsInvalid, Args: []interface{}{key}}
+			}
+		}
 	case bson.A:
+		if len(org) == 0 && attribute.IsRequired {
+			return errors.RawErrorInfo{ErrCode: common.CCErrCommParamsInvalid, Args: []interface{}{key}}
+		}
+
+		if len(org) == 0 {
+			return errors.RawErrorInfo{}
+		}
+
+		if attribute.IsMultiple == nil {
+			return errors.RawErrorInfo{ErrCode: common.CCErrCommParamsInvalid, Args: []interface{}{key}}
+		}
+
+		if !(*attribute.IsMultiple) && len(org) != 1 {
+			return errors.RawErrorInfo{ErrCode: common.CCErrCommParamsInvalid, Args: []interface{}{key}}
+		}
+
+		for _, orgID := range org {
+			if !util.IsInteger(orgID) {
+				blog.Errorf("orgID params not int, type: %T, rid: %s", orgID, rid)
+				return errors.RawErrorInfo{ErrCode: common.CCErrCommParamsIsInvalid, Args: []interface{}{key}}
+			}
+		}
 	default:
 		blog.Errorf("params should be type organization,but its type is %T, rid: %s", val, rid)
-		return errors.RawErrorInfo{
-			ErrCode: common.CCErrCommParamsInvalid,
-			Args:    []interface{}{key},
-		}
+		return errors.RawErrorInfo{ErrCode: common.CCErrCommParamsInvalid, Args: []interface{}{key}}
 	}
+
 	return errors.RawErrorInfo{}
 }
 
 // validTable valid object attribute that is table type
-func (attribute *Attribute) validTable(ctx context.Context, val interface{}, key string) (
-	rawError errors.RawErrorInfo) {
+func (attribute *Attribute) validTable(ctx context.Context, val interface{}, key string) errors.RawErrorInfo {
 
 	rid := util.ExtractRequestIDFromContext(ctx)
 	if val == nil {
@@ -842,7 +1007,22 @@ func (attribute *Attribute) validTable(ctx context.Context, val interface{}, key
 		subAttrMap[subAttr.PropertyID] = subAttr
 	}
 
-	var valMapArr []mapstr.MapStr
+	if err := attribute.validTableValue(ctx, val, subAttrMap, rid); err != nil {
+		blog.Errorf("check value type failed, err: %v, rid: %s", err, rid)
+		return errors.RawErrorInfo{
+			ErrCode: common.CCErrCommParamsInvalid,
+			Args:    []interface{}{key},
+		}
+	}
+
+	return errors.RawErrorInfo{}
+}
+
+// validTableValue valid object attribute that is table type value
+func (attribute *Attribute) validTableValue(ctx context.Context, val interface{}, subAttrMap map[string]SubAttribute,
+	rid string) error {
+
+	valMapArr := make([]mapstr.MapStr, 0)
 	switch t := val.(type) {
 	case []interface{}:
 		valMapArr = make([]mapstr.MapStr, len(t))
@@ -855,7 +1035,7 @@ func (attribute *Attribute) validTable(ctx context.Context, val interface{}, key
 				valMap = v
 			default:
 				blog.Errorf("check value type failed, valMap: %#v, rid: %s", valMap, rid)
-				return errors.RawErrorInfo{ErrCode: common.CCErrCommParamsInvalid, Args: []interface{}{key}}
+				return fmt.Errorf("check value type failed, valMap: %v", valMap)
 			}
 			valMapArr[index] = valMap
 		}
@@ -868,7 +1048,7 @@ func (attribute *Attribute) validTable(ctx context.Context, val interface{}, key
 		}
 	default:
 		blog.Errorf("check value type failed, val: %#v, rid: %s", val, rid)
-		return errors.RawErrorInfo{ErrCode: common.CCErrCommParamsInvalid, Args: []interface{}{key}}
+		return fmt.Errorf("check value type failed, val: %v", val)
 	}
 
 	for _, value := range valMapArr {
@@ -876,21 +1056,49 @@ func (attribute *Attribute) validTable(ctx context.Context, val interface{}, key
 			validator, exist := subAttrMap[subKey]
 			if !exist {
 				blog.Errorf("extra field, subKey: %s, subValue: %v, rid: %s", subKey, subValue, rid)
-				return errors.RawErrorInfo{
-					ErrCode: common.CCErrCommParamsInvalid,
-					Args:    []interface{}{fmt.Sprintf("%s.%s", key, subKey)},
-				}
+				return fmt.Errorf("extra failed, subKey: %s, subValue: %v", subKey, subValue)
 			}
 			if rawError := validator.Validate(ctx, subValue, subKey); rawError.ErrCode != 0 {
-				blog.Errorf("validate sub-attr failed, key: %s, val: %v, err: %v, rid: %s", subKey, subValue, err, rid)
-				return errors.RawErrorInfo{
-					ErrCode: common.CCErrCommParamsInvalid,
-					Args:    []interface{}{fmt.Sprintf("%s.%s", key, subKey)},
-				}
+				blog.Errorf("validate sub-attr failed, key: %s, val: %v, rid: %s", subKey, subValue, rid)
+				return fmt.Errorf("validate sub-attr failed, key: %s, val: %v", subKey, subValue)
 			}
 		}
 	}
 
+	return nil
+}
+
+func (attribute *Attribute) validInnerTable(ctx context.Context, val interface{}, key string) errors.RawErrorInfo {
+	if val == nil {
+		return errors.RawErrorInfo{}
+	}
+
+	rid := util.ExtractRequestIDFromContext(ctx)
+
+	switch t := val.(type) {
+	case []interface{}:
+		if len(t) == 0 {
+			if attribute.IsRequired {
+				blog.Errorf("required inner table attribute %s value can not be empty, rid: %s", key, rid)
+				return errors.RawErrorInfo{ErrCode: common.CCErrCommParamsNeedSet, Args: []interface{}{key}}
+			}
+			return errors.RawErrorInfo{}
+		}
+
+		if len(t) > 50 {
+			blog.Errorf("inner table attribute %s value length %d exceeds maximum, rid: %s", key, len(t), rid)
+			return errors.RawErrorInfo{ErrCode: common.CCErrArrayLengthWrong, Args: []interface{}{key, 50}}
+		}
+
+		_, err := util.SliceInterfaceToInt64(t)
+		if err != nil {
+			blog.Errorf("parse inner table value to int64 array failed, err: %v, type: %T, rid: %s", err, val, rid)
+			return errors.RawErrorInfo{ErrCode: common.CCErrCommParamsInvalid, Args: []interface{}{key}}
+		}
+	default:
+		blog.Errorf("params should be of inner table type, but its type is %T, rid: %s", val, rid)
+		return errors.RawErrorInfo{ErrCode: common.CCErrCommParamsInvalid, Args: []interface{}{key}}
+	}
 	return errors.RawErrorInfo{}
 }
 
@@ -898,9 +1106,10 @@ func (attribute *Attribute) validTable(ctx context.Context, val interface{}, key
 func parseFloatOption(ctx context.Context, val interface{}) FloatOption {
 	rid := util.ExtractRequestIDFromContext(ctx)
 	floatOption := FloatOption{}
-	if nil == val || "" == val {
+	if val == nil || val == "" {
 		return floatOption
 	}
+
 	switch option := val.(type) {
 	case string:
 		floatOption.Min = gjson.Get(option, "min").Raw
@@ -967,10 +1176,18 @@ func getString(val interface{}) string {
 	if val == nil {
 		return ""
 	}
-	if ret, ok := val.(string); ok {
+	switch ret := val.(type) {
+	case string:
 		return ret
+	default:
+		if util.IsNumeric(val) {
+			// compatible for int & float, need to merge with src/common/valid
+			js, _ := json.Marshal(ret)
+			return string(js)
+		}
+
+		return ""
 	}
-	return ""
 }
 
 func getBool(val interface{}) bool {
@@ -1074,31 +1291,85 @@ func parseEnumOption(options []interface{}, enumOptions *[]EnumVal) error {
 	return nil
 }
 
-// ParseFloatOption  parse float data in option
-func ParseFloatOption(ctx context.Context, val interface{}) FloatOption {
+// EnumQuoteVal enum quote option val
+type EnumQuoteVal struct {
+	ObjID  string `bson:"bk_obj_id" json:"bk_obj_id"`
+	InstID int64  `bson:"bk_inst_id" json:"bk_inst_id"`
+}
+
+// ParseEnumQuoteOption convert val to []EnumQuoteVal
+func ParseEnumQuoteOption(ctx context.Context, val interface{}) ([]EnumQuoteVal, error) {
 	rid := util.ExtractRequestIDFromContext(ctx)
-	floatOption := FloatOption{}
-	if nil == val || "" == val {
-		return floatOption
+	enumQuoteOptions := []EnumQuoteVal{}
+	if val == nil || val == "" {
+		return enumQuoteOptions, nil
 	}
-	switch option := val.(type) {
+	switch options := val.(type) {
+	case []EnumQuoteVal:
+		return options, nil
 	case string:
-		floatOption.Min = gjson.Get(option, "min").Raw
-		floatOption.Max = gjson.Get(option, "max").Raw
-	case map[string]interface{}:
-		floatOption.Min = getString(option["min"])
-		floatOption.Max = getString(option["max"])
-	case bson.M:
-		floatOption.Min = getString(option["min"])
-		floatOption.Max = getString(option["max"])
-	case bson.D:
-		opt := option.Map()
-		floatOption.Min = getString(opt["min"])
-		floatOption.Max = getString(opt["max"])
+		err := json.Unmarshal([]byte(options), &enumQuoteOptions)
+		if nil != err {
+			blog.Errorf("parse enum quote option failed, err: %v, rid: %s", err, rid)
+			return nil, err
+		}
+	case []interface{}:
+		if err := parseEnumQuoteOption(options, &enumQuoteOptions); err != nil {
+			blog.Errorf("parse enum quote option failed, err: %v, rid: %s", err, rid)
+			return nil, err
+		}
+	case primitive.A:
+		if err := parseEnumQuoteOption(options, &enumQuoteOptions); err != nil {
+			blog.Errorf("parse enum quote option failed, err: %v, rid: %s", err, rid)
+			return nil, err
+		}
 	default:
-		blog.Warnf("unknow val type: %#v, rid: %s", val, rid)
+		return nil, fmt.Errorf("unknow val type: %#v", val)
 	}
-	return floatOption
+	return enumQuoteOptions, nil
+}
+
+// getEnumQuoteOptions get enum quote option value
+func getEnumQuoteOptions(val map[string]interface{}, enumQuoteOptions *[]EnumQuoteVal) error {
+	enumQuoteOption := EnumQuoteVal{}
+	enumQuoteOption.ObjID = getString(val[common.BKObjIDField])
+	if enumQuoteOption.ObjID == "" {
+		return fmt.Errorf("operation %#v objID empty or not string", val)
+	}
+	instID, err := util.GetInt64ByInterface(val[common.BKInstIDField])
+	if err != nil {
+		return err
+	}
+	if instID == 0 {
+		return fmt.Errorf("inst id cannot be 0")
+	}
+	enumQuoteOption.InstID = instID
+	*enumQuoteOptions = append(*enumQuoteOptions, enumQuoteOption)
+	return nil
+}
+
+// parseEnumQuoteOption set enum quote Options values from options
+func parseEnumQuoteOption(options []interface{}, enumQuoteOptions *[]EnumQuoteVal) error {
+	for _, optionVal := range options {
+		switch val := optionVal.(type) {
+		case map[string]interface{}:
+			if err := getEnumQuoteOptions(val, enumQuoteOptions); err != nil {
+				return err
+			}
+		case bson.M:
+			if err := getEnumQuoteOptions(val, enumQuoteOptions); err != nil {
+				return err
+			}
+		case bson.D:
+			opt := val.Map()
+			if err := getEnumQuoteOptions(opt, enumQuoteOptions); err != nil {
+				return err
+			}
+		default:
+			return fmt.Errorf("unknow optionVal type: %#v", optionVal)
+		}
+	}
+	return nil
 }
 
 // PrettyValue TODO
@@ -1184,7 +1455,8 @@ func (attribute Attribute) PrettyValue(ctx context.Context, val interface{}) (st
 
 		listOption, ok := attribute.Option.([]interface{})
 		if false == ok {
-			return "", fmt.Errorf("parse options for list type failed, option not slice type, option: %+v", attribute.Option)
+			return "", fmt.Errorf("parse options for list type failed, option not slice type, option: %+v",
+				attribute.Option)
 		}
 		for _, inVal := range listOption {
 			inValStr, ok := inVal.(string)
@@ -1200,7 +1472,53 @@ func (attribute Attribute) PrettyValue(ctx context.Context, val interface{}) (st
 		blog.V(3).Infof("unexpected property type: %s", fieldType)
 		return fmt.Sprintf("%#v", val), nil
 	}
-	return "", nil
+}
+
+// ValidTableDefaultAttr judging the legitimacy of the basic type in the table field.
+func (attribute *Attribute) ValidTableDefaultAttr(ctx context.Context, val interface{}) errors.RawErrorInfo {
+	rid := util.ExtractRequestIDFromContext(ctx)
+	if attribute == nil {
+		blog.Errorf("the key of the default value is illegal and not in the header list, rid: %s", rid)
+		return errors.RawErrorInfo{
+			ErrCode: common.CCErrCommParamsNeedSet,
+			Args:    []interface{}{"default key"},
+		}
+	}
+
+	switch attribute.PropertyType {
+	case common.FieldTypeInt:
+		return attribute.validInt(ctx, val, attribute.PropertyID)
+	case common.FieldTypeFloat:
+		return attribute.validFloat(ctx, val, attribute.PropertyID)
+	case common.FieldTypeSingleChar:
+		return attribute.validChar(ctx, val, attribute.PropertyID)
+	case common.FieldTypeLongChar:
+		return attribute.validLongChar(ctx, val, attribute.PropertyID)
+	case common.FieldTypeEnumMulti:
+		return attribute.validEnumMulti(ctx, val, attribute.PropertyID)
+	case common.FieldTypeBool:
+		return attribute.validBool(ctx, val, attribute.PropertyID)
+	default:
+		blog.Errorf("type error, type: %s, rid: %s", attribute.PropertyType, rid)
+		return errors.RawErrorInfo{
+			ErrCode: common.CCErrCommParamsInvalid,
+			Args:    []interface{}{attribute.PropertyType},
+		}
+	}
+}
+
+// ParseTableAttrOption parse table attribute options.
+func ParseTableAttrOption(option interface{}) (*TableAttributesOption, error) {
+	marshaledOptions, err := json.Marshal(option)
+	if err != nil {
+		return nil, err
+	}
+
+	result := new(TableAttributesOption)
+	if err := json.Unmarshal(marshaledOptions, result); err != nil {
+		return nil, err
+	}
+	return result, nil
 }
 
 // HostApplyFieldMap TODO
@@ -1247,7 +1565,10 @@ func CheckAllowHostApplyOnField(field *Attribute) bool {
 	if !field.IsEditable {
 		return false
 	}
-
+	// 屏蔽表格字段
+	if field.PropertyType == common.FieldTypeInnerTable {
+		return false
+	}
 	if allow, exist := HostApplyFieldMap[field.PropertyID]; exist == true {
 		return allow
 	}
@@ -1274,7 +1595,7 @@ type SubAttribute struct {
 }
 
 // Validate TODO
-func (sa *SubAttribute) Validate(ctx context.Context, data interface{}, key string) (rawError errors.RawErrorInfo) {
+func (sa *SubAttribute) Validate(ctx context.Context, data interface{}, key string) errors.RawErrorInfo {
 	attr := Attribute{
 		PropertyID:   sa.PropertyID,
 		PropertyName: sa.PropertyName,
@@ -1379,3 +1700,21 @@ type AttributesOption struct {
 
 // ListOptions TODO
 type ListOptions []string
+
+// TableAttributesOption the option of the form field, including the header and the default value.
+type TableAttributesOption struct {
+	Header  []Attribute              `json:"header" bson:"header" mapstructure:"header"`
+	Default []map[string]interface{} `json:"default" bson:"default" mapstructure:"default"`
+}
+
+// ValidTableFieldBaseType determine the basic type supported by the form field.
+func ValidTableFieldBaseType(fieldType string) bool {
+
+	switch fieldType {
+	case common.FieldTypeSingleChar, common.FieldTypeLongChar, common.FieldTypeBool,
+		common.FieldTypeEnumMulti, common.FieldTypeFloat, common.FieldTypeInt:
+		return true
+	default:
+		return false
+	}
+}

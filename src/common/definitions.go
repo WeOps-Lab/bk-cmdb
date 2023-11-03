@@ -62,7 +62,10 @@ const (
 	BKAuditLogPageLimit = 200
 
 	// BKMaxExportLimit the limit to export
-	BKMaxExportLimit = 10000
+	BKMaxExportLimit = 100
+
+	// BKInstMaxExportLimit the limit to instance export
+	BKInstMaxExportLimit = 1000
 
 	// BKMaxOnceExportLimit the limit once to export
 	BKMaxOnceExportLimit = 30000
@@ -91,6 +94,8 @@ const (
 	// BKMaxSyncIdentifierLimit sync identifier max value
 	BKMaxSyncIdentifierLimit = 200
 
+	// BKMaxWriteOpLimit maximum limit of write operation.
+	BKMaxWriteOpLimit = 200
 	// BKWriteOpLimit default write operation limit
 	BKWriteOpLimit = 200
 )
@@ -126,6 +131,9 @@ const (
 
 	// BKInnerObjIDPlat the inner object
 	BKInnerObjIDPlat = "plat"
+
+	// BKInnerObjIDProject the inner object
+	BKInnerObjIDProject = "bk_project"
 
 	// BKInnerObjIDSwitch the inner object
 	BKInnerObjIDSwitch = "bk_switch"
@@ -243,6 +251,9 @@ const (
 
 	// BKDBLimit the db operator to limit return number of doc
 	BKDBLimit = "$limit"
+
+	// BKDBUnwind used to split values contained in an array field into separate doc
+	BKDBUnwind = "$unwind"
 )
 
 const (
@@ -286,6 +297,12 @@ const (
 
 	// BKHostOuterIPField the host outerip field
 	BKHostOuterIPField = "bk_host_outerip"
+
+	// BKAddressingStatic the host addressing is static
+	BKAddressingStatic = "static"
+
+	// BKAddressingDynamic the host addressing is dynamic
+	BKAddressingDynamic = "dynamic"
 
 	// BKCloudInstIDField the cloud instance id field
 	BKCloudInstIDField = "bk_cloud_inst_id"
@@ -419,6 +436,9 @@ const (
 	// BKClassificationIDField the classification id field
 	BKClassificationIDField = "bk_classification_id"
 
+	// BKClassificationTypeField the classification type field
+	BKClassificationTypeField = "bk_classification_type"
+
 	// BKClassificationNameField the classification name field
 	BKClassificationNameField = "bk_classification_name"
 
@@ -463,6 +483,9 @@ const (
 
 	// BKResourceNameField the audit resource name field
 	BKResourceNameField = "resource_name"
+
+	// BKExtendResourceNameField the audit extend resource name field
+	BKExtendResourceNameField = "extend_resource_name"
 
 	// BKLabelField the audit resource name field
 	BKLabelField = "label"
@@ -634,6 +657,10 @@ const (
 
 	// BKIsOnlyField the isonly name field
 	BKIsOnlyField = "isonly"
+	// BKIsMultipleField the is multiple name field
+	BKIsMultipleField = "ismultiple"
+	// BKDefaultFiled the is default name field
+	BKDefaultFiled = "default"
 	// BKGseTaskIDField the gse taskid
 	BKGseTaskIDField = "task_id"
 	// BKTaskIDField the gse taskid
@@ -723,6 +750,37 @@ const (
 
 	// BKCloudHostIdentifierField defines if the host is a cloud host that doesn't allow cross biz transfer
 	BKCloudHostIdentifierField = "bk_cloud_host_identifier"
+
+	// BKAddressingField the addressing field, defines the host addressing type
+	BKAddressingField = "bk_addressing"
+	// BKProjectIDField the project id field
+	BKProjectIDField = "bk_project_id"
+	// BKProjectNameField the project name field
+	BKProjectNameField = "bk_project_name"
+	// BKProjectCodeField the project code field
+	BKProjectCodeField = "bk_project_code"
+	// BKProjectDescField the project desc field
+	BKProjectDescField = "bk_project_desc"
+	// BKProjectTypeField the project type field
+	BKProjectTypeField = "bk_project_type"
+	// BKProjectSecLvlField the project sec lvl field
+	BKProjectSecLvlField = "bk_project_sec_lvl"
+	// BKProjectOwnerField the project owner field
+	BKProjectOwnerField = "bk_project_owner"
+	// BKProjectTeamField the project team field
+	BKProjectTeamField = "bk_project_team"
+	// BKProjectStatusField the project status field
+	BKProjectStatusField = "bk_status"
+	// BKProjectIconField the project icon field
+	BKProjectIconField = "bk_project_icon"
+
+	// BKSrcModelField source model field in model relationship table.
+	BKSrcModelField = "src_model"
+	// BKDestModelField destination model field in the model relationship table.
+	BKDestModelField = "dest_model"
+
+	// ObjectIDField the object id field, it is an int type field and is used to associate with the model
+	ObjectIDField = "object_id"
 )
 
 const (
@@ -802,8 +860,8 @@ const DefaultAppFlag int = 1
 // DefaultAppName the default app name
 const DefaultAppName string = "资源池"
 
-// DefaultCloudName TODO
-const DefaultCloudName string = "default area"
+// DefaultCloudName default area
+const DefaultCloudName string = "Default Area"
 
 // DefaultInstName TODO
 const DefaultInstName string = "实例名"
@@ -867,6 +925,12 @@ const (
 	// FieldTypeEnum the enum field type
 	FieldTypeEnum string = "enum"
 
+	// FieldTypeEnumMulti the enum multi field type
+	FieldTypeEnumMulti string = "enummulti"
+
+	// FieldTypeEnumQuote the enum quote field type
+	FieldTypeEnumQuote string = "enumquote"
+
 	// FieldTypeDate the date field type
 	FieldTypeDate string = "date"
 
@@ -892,6 +956,10 @@ const (
 
 	// FieldTypeTable the table type, inner type.
 	FieldTypeTable string = "table"
+
+	// FieldTypeInnerTable the table type, the type
+	// used for table fields in model reference scenarios
+	FieldTypeInnerTable string = "innertable"
 
 	// FieldTypeOrganization the organization field type
 	FieldTypeOrganization string = "organization"
@@ -931,8 +999,8 @@ const (
 	// HostAddMethodAPI add api method
 	HostAddMethodAPI = "3"
 
-	// HostAddMethodExcelIndexOffset the height of the table header
-	HostAddMethodExcelIndexOffset = 3
+	// AddExcelDataIndexOffset the index of the add excel data
+	AddExcelDataIndexOffset = 6
 
 	// HostAddMethodExcelAssociationIndexOffset TODO
 	HostAddMethodExcelAssociationIndexOffset = 2
@@ -963,6 +1031,8 @@ const (
 	ExcelHeaderFirstColumnColor = "fee9da"
 	// ExcelFirstColumnCellColor dark gray
 	ExcelFirstColumnCellColor = "fabf8f"
+	// ExcelTableHeaderColor excel table header color
+	ExcelTableHeaderColor = "d1e0b6"
 
 	// ExcelAsstPrimaryKeySplitChar split char
 	ExcelAsstPrimaryKeySplitChar = ","
@@ -982,11 +1052,17 @@ const (
 
 	// ExcelFirstColumnFieldName export excel first column for tips
 	ExcelFirstColumnFieldName = "field_name"
-	// ExcelFirstColumnFieldType TODO
+	// ExcelFirstColumnFieldType excel first column type field
 	ExcelFirstColumnFieldType = "field_type"
-	// ExcelFirstColumnFieldID TODO
+	// ExcelFirstColumnFieldID excel first column id field
 	ExcelFirstColumnFieldID = "field_id"
-	// ExcelFirstColumnInstData TODO
+	// ExcelFirstColumnTableFieldName excel first column table name filed
+	ExcelFirstColumnTableFieldName = "table_field_name"
+	// ExcelFirstColumnFieldType excel first column table type field
+	ExcelFirstColumnTableFieldType = "table_field_type"
+	// ExcelFirstColumnFieldID excel first column table id field
+	ExcelFirstColumnTableFieldID = "table_field_id"
+	// ExcelFirstColumnInstData excel first column instance data field
 	ExcelFirstColumnInstData = "inst_data"
 
 	// ExcelFirstColumnAssociationAttribute TODO
@@ -1051,6 +1127,10 @@ const (
 const (
 	EventCacheEventIDKey = BKCacheKeyV3Prefix + "event:inst_id"
 	RedisSnapKeyPrefix   = BKCacheKeyV3Prefix + "snapshot:"
+
+	// RedisHostSnapMsgDelayQueue the monitor reports data, and queries the name of the key placed in the delay queue in
+	// the case of host failure.
+	RedisHostSnapMsgDelayQueue = BKCacheKeyV3Prefix + "host_snap:delay_queue"
 )
 const (
 	// RedisSentinelMode redis mode is sentinel
@@ -1152,7 +1232,19 @@ const (
 	HostOSTypeEnumUNIX    = "4"
 	HostOSTypeEnumSolaris = "5"
 	HostOSTypeEnumHpUX    = "6"
+	HostOSTypeEnumFreeBSD = "7"
 )
+
+// HostOSTypeName Host system enum and name association
+var HostOSTypeName = map[string]string{
+	HostOSTypeEnumLinux:   "linux",
+	HostOSTypeEnumWindows: "windows",
+	HostOSTypeEnumAIX:     "aix",
+	HostOSTypeEnumUNIX:    "unix",
+	HostOSTypeEnumSolaris: "solaris",
+	HostOSTypeEnumHpUX:    "hp-ux",
+	HostOSTypeEnumFreeBSD: "freebsd",
+}
 
 const (
 	// MaxProcessPrio TODO
@@ -1462,7 +1554,8 @@ const (
 	SyncSetTaskFlag = "set_template_sync"
 	// SyncModuleTaskFlag TODO
 	SyncModuleTaskFlag = "service_template_sync"
-
+	// SyncFieldTemplateTaskFlag field template synchronization task flag
+	SyncFieldTemplateTaskFlag = "field_template_sync"
 	// SyncModuleHostApplyTaskFlag module dimension host auto-apply async task flag.
 	SyncModuleHostApplyTaskFlag = "module_host_apply_sync"
 	// SyncServiceTemplateHostApplyTaskFlag  service template dimension host auto-apply async task flag.
@@ -1544,4 +1637,21 @@ const (
 const (
 	// DefaultResBusinessSetFlag the default resource business set flag
 	DefaultResBusinessSetFlag = 1
+)
+
+const (
+	// HostFavoriteType host query favorite condition type
+	HostFavoriteType = "type"
+)
+
+// ModelQuoteType model quote type.
+type ModelQuoteType string
+
+const (
+	Table ModelQuoteType = "table"
+)
+
+const (
+	// BKTemplateID template id field
+	BKTemplateID = "bk_template_id"
 )
