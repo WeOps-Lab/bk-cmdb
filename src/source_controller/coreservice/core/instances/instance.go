@@ -421,6 +421,7 @@ func (m *instanceManager) SearchModelInstance(kit *rest.Kit, objID string, input
 		inputParam.Condition[common.BKObjIDField] = objID
 	}
 	inputParam.Condition = util.SetQueryOwner(inputParam.Condition, kit.SupplierAccount)
+	inputParam.Condition = util.ConvertToAndMap(inputParam.Condition)
 
 	if inputParam.TimeCondition != nil {
 		var err error

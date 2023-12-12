@@ -14,6 +14,8 @@ package util
 
 import (
 	"configcenter/src/common"
+	"strconv"
+	"strings"
 )
 
 // SetQueryOwner returns condition that in default ownerID and request ownerID
@@ -42,4 +44,40 @@ func SetModOwner(condition map[string]interface{}, ownerID string) map[string]in
 	}
 	condition[common.BKOwnerIDField] = ownerID
 	return condition
+}
+
+func GenerateKey(fieldName string, index int) string {
+	if index == 0 {
+		return fieldName
+	}
+	return fieldName + "-" + strconv.Itoa(index)
+}
+
+func GetOriginalKey(fieldName string) string {
+	parts := strings.Split(fieldName, "-")
+	return parts[0]
+}
+
+func ConvertToAndMap(data map[string]interface{}) map[string]interface{} {
+	andOrKeys := []string{common.BKDBAND, common.BKDBOR}
+
+	for _, key := range andOrKeys {
+		if _, ok := data[key].([]interface{}); ok {
+			return data
+		}
+	}
+	andMap := make(map[string]interface{})
+	andMap[common.BKDBAND] = []interface{}{}
+
+	for key, value := range data {
+		originalKey := GetOriginalKey(key)
+
+		condition := map[string]interface{}{
+			originalKey: value,
+		}
+
+		andMap[common.BKDBAND] = append(andMap[common.BKDBAND].([]interface{}), condition)
+	}
+
+	return andMap
 }

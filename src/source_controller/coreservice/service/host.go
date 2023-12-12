@@ -184,7 +184,8 @@ func (s *coreService) GetHosts(ctx *rest.Contexts) {
 
 	condition = util.SetModOwner(condition, ctx.Kit.SupplierAccount)
 	fieldArr := util.SplitStrField(dat.Fields, ",")
-
+	// 把condition变成and模式
+	condition = util.ConvertToAndMap(condition)
 	result := make([]metadata.HostMapStr, 0)
 	dbInst := mongodb.Client().Table(common.BKTableNameBaseHost).Find(condition).Sort(dat.Sort).Start(uint64(dat.Start)).Limit(uint64(dat.Limit))
 	if 0 < len(fieldArr) {
