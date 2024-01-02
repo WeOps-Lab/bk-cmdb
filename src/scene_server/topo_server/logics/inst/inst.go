@@ -251,7 +251,7 @@ func (c *commonInst) CreateManyInstance(kit *rest.Kit, objID string, data []maps
 
 // createInstBatch batch create instance by excel
 func (c *commonInst) createInstBatch(kit *rest.Kit, objID string, batchInfo *metadata.InstBatchInfo,
-	idFieldName string) (*BatchResult, []int64, []int64, error){
+	idFieldName string) (*BatchResult, []int64, []int64, error) {
 	updatedInstanceIDs := make([]int64, 0)
 	createdInstanceIDs := make([]int64, 0)
 	colIdxErrMap := map[int]string{}
@@ -562,23 +562,35 @@ func (c *commonInst) FindInstByAssociationInst(kit *rest.Kit, objID string,
 	for keyObjID, objs := range asstParamCond.Condition {
 		// Extract the ID of the instance according to the associated object.
 		cond := map[string]interface{}{}
+		count := make(map[string]int)
 		if common.GetObjByType(keyObjID) == common.BKInnerObjIDObject {
 			cond[common.BKObjIDField] = keyObjID
 		}
 
 		for _, objCondition := range objs {
+			rawKey := objCondition.Field
+
+			// Check if count[key] exists
+			if _, ok := count[rawKey]; !ok {
+				count[rawKey] = 0
+			}
+			// Increment the count
+
+			// Generate the key based on occurrence count
+			key := util.GenerateKey(rawKey, count[rawKey])
+			count[rawKey]++
 			if objCondition.Operator != common.BKDBEQ {
 				if objID == keyObjID {
 					if objCondition.Operator == common.BKDBLIKE ||
 						objCondition.Operator == common.BKDBMULTIPLELike {
 						switch t := objCondition.Value.(type) {
 						case string:
-							instCond[objCondition.Field] = map[string]interface{}{
+							instCond[key] = map[string]interface{}{
 								objCondition.Operator: gparams.SpecialCharChange(t),
 							}
 						default:
 							// deal self condition
-							instCond[objCondition.Field] = map[string]interface{}{
+							instCond[key] = map[string]interface{}{
 								objCondition.Operator: objCondition.Value,
 							}
 						}
@@ -589,21 +601,21 @@ func (c *commonInst) FindInstByAssociationInst(kit *rest.Kit, objID string,
 
 						// fix condition covered when do date range search action.
 						// ISSUE: https://github.com/Tencent/bk-cmdb/issues/5302
-						if _, isExist := instCond[objCondition.Field]; !isExist {
-							instCond[objCondition.Field] = make(map[string]interface{})
+						if _, isExist := instCond[key]; !isExist {
+							instCond[key] = make(map[string]interface{})
 						}
-						if condValue, ok := instCond[objCondition.Field].(map[string]interface{}); ok {
+						if condValue, ok := instCond[key].(map[string]interface{}); ok {
 							condValue[objCondition.Operator] = objCondition.Value
 						}
 					} else {
 						// deal self condition
-						instCond[objCondition.Field] = map[string]interface{}{
+						instCond[key] = map[string]interface{}{
 							objCondition.Operator: objCondition.Value,
 						}
 					}
 				} else {
 					// deal association condition
-					cond[objCondition.Field] = map[string]interface{}{
+					cond[key] = map[string]interface{}{
 						objCondition.Operator: objCondition.Value,
 					}
 				}
@@ -612,16 +624,16 @@ func (c *commonInst) FindInstByAssociationInst(kit *rest.Kit, objID string,
 					// deal self condition
 					switch t := objCondition.Value.(type) {
 					case string:
-						instCond[objCondition.Field] = map[string]interface{}{
+						instCond[key] = map[string]interface{}{
 							common.BKDBEQ: t,
 						}
 					default:
-						instCond[objCondition.Field] = objCondition.Value
+						instCond[key] = objCondition.Value
 					}
 
 				} else {
 					// deal association condition
-					cond[objCondition.Field] = objCondition.Value
+					cond[key] = objCondition.Value
 				}
 			}
 
