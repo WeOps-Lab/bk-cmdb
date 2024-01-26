@@ -102,6 +102,7 @@ type ConditionItem struct {
 	Field    string      `json:"field,omitempty"`
 	Operator string      `json:"operator,omitempty"`
 	Value    interface{} `json:"value,omitempty"`
+	Options  string      `json:"options,omitempty"`
 }
 
 // AssociationParams  association params
@@ -251,7 +252,7 @@ func (c *commonInst) CreateManyInstance(kit *rest.Kit, objID string, data []maps
 
 // createInstBatch batch create instance by excel
 func (c *commonInst) createInstBatch(kit *rest.Kit, objID string, batchInfo *metadata.InstBatchInfo,
-	idFieldName string) (*BatchResult, []int64, []int64, error){
+	idFieldName string) (*BatchResult, []int64, []int64, error) {
 	updatedInstanceIDs := make([]int64, 0)
 	createdInstanceIDs := make([]int64, 0)
 	colIdxErrMap := map[int]string{}
@@ -575,11 +576,13 @@ func (c *commonInst) FindInstByAssociationInst(kit *rest.Kit, objID string,
 						case string:
 							instCond[objCondition.Field] = map[string]interface{}{
 								objCondition.Operator: gparams.SpecialCharChange(t),
+								common.BKDBOPTIONS:    objCondition.Options,
 							}
 						default:
 							// deal self condition
 							instCond[objCondition.Field] = map[string]interface{}{
 								objCondition.Operator: objCondition.Value,
+								common.BKDBOPTIONS:    objCondition.Options,
 							}
 						}
 					} else if objCondition.Operator == common.BKDBLT ||
