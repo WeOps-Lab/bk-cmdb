@@ -102,6 +102,7 @@ type ConditionItem struct {
 	Field    string      `json:"field,omitempty"`
 	Operator string      `json:"operator,omitempty"`
 	Value    interface{} `json:"value,omitempty"`
+	Options  string      `json:"options,omitempty"`
 }
 
 // AssociationParams  association params
@@ -587,11 +588,13 @@ func (c *commonInst) FindInstByAssociationInst(kit *rest.Kit, objID string,
 						case string:
 							instCond[key] = map[string]interface{}{
 								objCondition.Operator: gparams.SpecialCharChange(t),
+								common.BKDBOPTIONS:    objCondition.Options,
 							}
 						default:
 							// deal self condition
 							instCond[key] = map[string]interface{}{
 								objCondition.Operator: objCondition.Value,
+								common.BKDBOPTIONS:    objCondition.Options,
 							}
 						}
 					} else if objCondition.Operator == common.BKDBLT ||
