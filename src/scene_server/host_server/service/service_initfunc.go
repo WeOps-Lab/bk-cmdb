@@ -228,6 +228,9 @@ func (s *Service) initModule(web *restful.WebService) {
 	// 主机在资源池目录之间转移
 	utility.AddHandler(rest.Action{Verb: http.MethodPost, Path: "/host/transfer/resource/directory", Handler: s.TransferHostResourceDirectory})
 
+	// 将主机从模块移除
+	utility.AddHandler(rest.Action{Verb: http.MethodDelete, Path: "/host/remove_from_module", Handler: s.RemoveHostFromModule})
+
 	utility.AddToRestfulWebService(web)
 
 }

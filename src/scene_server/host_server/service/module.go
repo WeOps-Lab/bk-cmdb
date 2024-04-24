@@ -450,3 +450,33 @@ func (s *Service) TransferHostResourceDirectory(ctx *rest.Contexts) {
 	ctx.RespEntity(nil)
 	return
 }
+
+func (s *Service) RemoveHostFromModule(ctx *rest.Contexts) {
+	input := &metadata.RemoveHostsFromModuleOption{}
+	if err := ctx.DecodeInto(&input); nil != err {
+		ctx.RespAutoError(err)
+		return
+	}
+
+	audit := auditlog.NewHostModuleLog(s.CoreAPI.CoreService(), []int64{input.HostID})
+	if err := audit.WithPrevious(ctx.Kit); err != nil {
+		blog.Errorf("RemoveHostFromModule, but get prev module host config failed, err: %v, hostIDs:%#v,rid:%s", err, input.HostID, ctx.Kit.Rid)
+		ctx.RespAutoError(ctx.Kit.CCError.Errorf(common.CCErrCommResourceInitFailed, "audit server"))
+		return
+	}
+
+	result, err := s.CoreAPI.CoreService().Host().RemoveFromModule(ctx.Kit.Ctx, ctx.Kit.Header, input)
+	if err != nil {
+		ctx.RespAutoError(err)
+		return
+	}
+
+	if err := audit.SaveAudit(ctx.Kit); err != nil {
+		blog.Errorf("remove host from module, but save audit log failed, err: %v, input:%+v,rid:%s", err, input.HostID, ctx.Kit.Rid)
+		ctx.RespAutoError(ctx.Kit.CCError.Errorf(common.CCErrCommResourceInitFailed, "audit server"))
+		return
+	}
+
+	ctx.RespEntity(result)
+	return
+}
