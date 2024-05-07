@@ -345,6 +345,8 @@ const (
 
 	// 查询业务下的主机CPU数量的特殊接口，给成本管理使用
 	countHostCPUPattern = "/api/v3/host/count/cpu"
+
+	removeHostFromModule = "/api/v3/host/remove_from_module"
 )
 
 var (
@@ -1374,6 +1376,18 @@ func (ps *parseStream) hostTransfer() *parseStream {
 				Basic: meta.Basic{
 					Type:   meta.ConfigAdmin,
 					Action: meta.Update,
+				},
+			},
+		}
+		return ps
+	}
+
+	if ps.hitPattern(removeHostFromModule, http.MethodDelete) {
+		ps.Attribute.Resources = []meta.ResourceAttribute{
+			{
+				Basic: meta.Basic{
+					Type:   meta.ModelModule,
+					Action: meta.Delete,
 				},
 			},
 		}
