@@ -831,7 +831,12 @@ func (s *Service) SearchAssociationRelatedInst(ctx *rest.Contexts) {
 		ctx.RespAutoError(err)
 	}
 
-	ctx.RespEntity(res.Info)
+	if request.Page.EnableCount {
+		ctx.RespEntity(res)
+	} else {
+		ctx.RespEntity(res.Info)
+	}
+
 }
 
 // SearchInstAssociationAndInstDetail search association, source object inst and destination object inst
