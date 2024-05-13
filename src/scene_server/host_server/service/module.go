@@ -477,6 +477,11 @@ func (s *Service) RemoveHostFromModule(ctx *rest.Contexts) {
 		return
 	}
 
-	ctx.RespEntity(result)
+	if !result.Result {
+		ctx.Response(&metadata.Response{BaseResp: result.BaseResp})
+	} else {
+		ctx.RespEntity(nil)
+	}
+
 	return
 }
