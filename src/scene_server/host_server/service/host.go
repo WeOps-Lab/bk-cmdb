@@ -710,6 +710,7 @@ func (s *Service) updateHostPropertyBatch(kit *rest.Kit, hostIDArr []int64,
 
 		var (
 			wg       sync.WaitGroup
+			lock     sync.Mutex
 			firstErr error
 		)
 		pipeline := make(chan bool, 5)
@@ -769,7 +770,9 @@ func (s *Service) updateHostPropertyBatch(kit *rest.Kit, hostIDArr []int64,
 					return
 				}
 				// add audit log.
+				lock.Lock()
 				auditContexts = append(auditContexts, auditLog...)
+				lock.Unlock()
 			}(update)
 		}
 
