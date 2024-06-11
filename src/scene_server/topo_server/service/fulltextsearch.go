@@ -142,8 +142,8 @@ func (p *Page) Validate() error {
 	if p.Limit <= 0 {
 		return errors.New("page limit must great than 0")
 	}
-	if p.Limit > 100 {
-		return errors.New("page limit must less than or equal to 100")
+	if p.Limit > 500 {
+		return errors.New("page limit must less than or equal to 500")
 	}
 
 	return nil
