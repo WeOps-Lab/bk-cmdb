@@ -60,7 +60,7 @@ type Config struct {
 
 // BuildURI return mongo uri according to  https://docs.mongodb.com/manual/reference/connection-string/
 // format example: mongodb://[username:password@]host1[:port1][,host2[:port2],...[,hostN[:portN]]][/[database][?options]]
-func (c Config) BuildURI() string {
+func (c Config) BuildURI() (uri string) {
 	if c.Connect != "" {
 		return c.Connect
 	}
@@ -71,7 +71,11 @@ func (c Config) BuildURI() string {
 
 	c.User = url.QueryEscape(c.User)
 	c.Password = url.QueryEscape(c.Password)
-	uri := fmt.Sprintf("mongodb://%s:%s@%s/%s?authMechanism=%s", c.User, c.Password, c.Address, c.Database, c.Mechanism)
+	if c.RsName == "" {
+		uri = fmt.Sprintf("mongodb://%s:%s@%s/%s?authMechanism=%s", c.User, c.Password, c.Address, c.Database, c.Mechanism)
+	} else {
+		uri = fmt.Sprintf("mongodb://%s:%s@%s/%s?authMechanism=%s&replicaSet=%s", c.User, c.Password, c.Address, c.Database, c.Mechanism, c.RsName)
+	}
 	return uri
 }
 
