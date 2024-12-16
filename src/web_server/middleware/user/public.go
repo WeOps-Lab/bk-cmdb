@@ -71,6 +71,9 @@ func (m *publicUser) LoginUser(c *gin.Context) bool {
 
 	session := sessions.Default(c)
 
+	// 设置session过期时间为24小时
+	session.Options(sessions.Options{MaxAge: 24 * 60 * 60})
+
 	session.Set(common.WEBSessionUinKey, userInfo.UserName)
 	session.Set(common.WEBSessionChineseNameKey, userInfo.ChName)
 	session.Set(common.WEBSessionPhoneKey, userInfo.Phone)
