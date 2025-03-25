@@ -79,8 +79,12 @@ func (a *audit) getInstNameByID(kit *rest.Kit, objID string, instID int64) (stri
 		return "", err
 	}
 
-	if len(insts) != 1 {
-		blog.Errorf("failed to getting instance name, instance not one, instID: %d, objID: %d, rid: %s",
+	if len(insts) > 1 {
+		blog.Errorf("failed to get instance name, find duplicate instance, instID: %d, objID: %d, rid: %s, data: %+v",
+			instID, objID, kit.Rid, insts)
+		return "", kit.CCError.CCErrorf(common.CCErrCommParamsIsInvalid, instIDField)
+	} else if len(insts) == 0 {
+		blog.Errorf("failed to get instance name, no instance find, instID: %d, objID: %d, rid: %s",
 			instID, objID, kit.Rid)
 		return "", kit.CCError.CCErrorf(common.CCErrCommParamsIsInvalid, instIDField)
 	}
