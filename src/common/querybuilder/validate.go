@@ -31,6 +31,8 @@ var (
 	TypeString = "string"
 	// TypeUnknown TODO
 	TypeUnknown = "unknown"
+	// TypeArray TODO
+	TypeArray = "array"
 )
 
 func getType(value interface{}) string {
@@ -42,6 +44,11 @@ func getType(value interface{}) string {
 	case string:
 		return TypeString
 	default:
+		// 通过反射获取类型，针对数组和切片
+		t := reflect.TypeOf(value)
+		if t.Kind() == reflect.Array || t.Kind() == reflect.Slice {
+			return TypeArray
+		}
 		return TypeUnknown
 	}
 }
