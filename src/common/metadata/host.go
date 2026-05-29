@@ -14,6 +14,7 @@ package metadata
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -24,9 +25,12 @@ import (
 	"go.mongodb.org/mongo-driver/bson/bsoncodec"
 	"go.mongodb.org/mongo-driver/bson/bsonrw"
 	"go.mongodb.org/mongo-driver/bson/bsontype"
-	"go.mongodb.org/mongo-driver/x/bsonx"
 	"go.mongodb.org/mongo-driver/x/bsonx/bsoncore"
 )
+
+// errNilDocument is returned when unmarshaling into a nil target.
+// Replaces the removed go.mongodb.org/mongo-driver/x/bsonx.ErrNilDocument.
+var errNilDocument = errors.New("document is nil")
 
 // HostMapStr TODO
 // host map with string type ip and operator, can only get host from db with this map
@@ -35,7 +39,7 @@ type HostMapStr map[string]interface{}
 // UnmarshalBSON TODO
 func (h *HostMapStr) UnmarshalBSON(b []byte) error {
 	if h == nil {
-		return bsonx.ErrNilDocument
+		return errNilDocument
 	}
 	elements, err := bsoncore.Document(b).Elements()
 	if err != nil {
@@ -143,7 +147,7 @@ type StringArrayToString string
 // UnmarshalBSONValue TODO
 func (s *StringArrayToString) UnmarshalBSONValue(typo bsontype.Type, raw []byte) error {
 	if s == nil {
-		return bsonx.ErrNilDocument
+		return errNilDocument
 	}
 	value := bsoncore.Value{
 		Type: typo,

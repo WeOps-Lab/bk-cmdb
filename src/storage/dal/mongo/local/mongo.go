@@ -34,7 +34,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
-	"go.mongodb.org/mongo-driver/x/bsonx"
 	"go.mongodb.org/mongo-driver/x/mongo/driver/connstring"
 )
 
@@ -113,7 +112,7 @@ func NewMgo(config MongoConf, timeout time.Duration) (*Mongo, error) {
 func checkMongodbVersion(db string, client *mongo.Client) error {
 	serverStatus, err := client.Database(db).RunCommand(
 		context.Background(),
-		bsonx.Doc{{"serverStatus", bsonx.Int32(1)}},
+		bson.D{{Key: "serverStatus", Value: int32(1)}},
 	).DecodeBytes()
 	if err != nil {
 		return err
@@ -656,7 +655,7 @@ func (c *Collection) tryArchiveDeletedDoc(ctx context.Context, filter types.Filt
 		}
 	}
 
-	docs := make([]bsonx.Doc, 0)
+	docs := make([]bson.Raw, 0)
 	cursor, err := c.dbc.Database(c.dbname).Collection(c.collName).Find(ctx, filter, nil)
 	if err != nil {
 		return err
@@ -672,9 +671,14 @@ func (c *Collection) tryArchiveDeletedDoc(ctx context.Context, filter types.Filt
 
 	archives := make([]interface{}, len(docs))
 	for idx, doc := range docs {
+		detail := bson.M{}
+		if err := bson.Unmarshal(doc, &detail); err != nil {
+			return err
+		}
+		delete(detail, "_id")
 		archives[idx] = metadata.DeleteArchive{
 			Oid:    doc.Lookup("_id").ObjectID().Hex(),
-			Detail: doc.Delete("_id"),
+			Detail: detail,
 			Coll:   c.collName,
 		}
 	}

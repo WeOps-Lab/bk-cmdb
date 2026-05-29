@@ -22,7 +22,7 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/bsontype"
-	"go.mongodb.org/mongo-driver/x/bsonx"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // Time TODO
@@ -55,7 +55,7 @@ func (t *Time) UnmarshalJSON(data []byte) error {
 
 // MarshalBSONValue implements bson.MarshalBSON interface
 func (t Time) MarshalBSONValue() (bsontype.Type, []byte, error) {
-	return bsonx.Time(t.Time).MarshalBSONValue()
+	return bson.MarshalValue(primitive.NewDateTimeFromTime(t.Time))
 }
 
 // UnmarshalBSONValue implements bson.UnmarshalBSONValue interface

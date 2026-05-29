@@ -14,6 +14,7 @@ package local
 
 import (
 	"context"
+	"crypto/rand"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -28,7 +29,6 @@ import (
 	"configcenter/src/storage/dal/redis"
 
 	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/x/mongo/driver/uuid"
 )
 
 const (
@@ -293,8 +293,11 @@ func (t *TxnManager) GetTxnError(sessionID sessionKey) TxnErrorType {
 // GenSessionID TODO
 func GenSessionID() (string, error) {
 	// mongodb driver used this as it's mongodb session id, and we use it too.
-	id, err := uuid.New()
-	if err != nil {
+	// NOTE: mongo-driver moved x/mongo/driver/uuid into internal/uuid since v1.12,
+	// which is not importable from outside the module. The lsid only needs to be a
+	// unique 16-byte UUID(subtype 4) binary, so we generate it with crypto/rand.
+	var id [16]byte
+	if _, err := rand.Read(id[:]); err != nil {
 		return "", err
 	}
 	return base64.StdEncoding.EncodeToString(id[:]), nil
