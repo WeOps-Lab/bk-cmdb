@@ -132,19 +132,29 @@ func (s *Service) RestfulWebService() *restful.WebService {
 	ws := restful.WebService{}
 	ws.Path("/metrics")
 	ws.Route(ws.GET("/").To(func(req *restful.Request, resp *restful.Response) {
-		blog.Info("metrics")
-		s.httpHandler.ServeHTTP(resp, req.Request)
+		http.NotFound(resp.ResponseWriter, req.Request)
 	}))
 
 	return &ws
 }
 
+// endpointClosed reports paths that must not be served on this branch.
+// /debug/pprof, /metrics, and /healthz are closed, including trailing slashes
+// and pprof subpaths such as /debug/pprof/heap.
+func endpointClosed(path string) bool {
+	switch path {
+	case "/metrics", "/metrics/", "/healthz", "/healthz/":
+		return true
+	default:
+		return strings.HasPrefix(path, "/debug/pprof")
+	}
+}
+
 // HTTPMiddleware is the http middleware for go-restful framework
 func (s *Service) HTTPMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
-		if r.RequestURI == "/metrics" || r.RequestURI == "/metrics/" {
-			s.ServeHTTP(w, r)
+		if endpointClosed(r.URL.Path) {
+			http.NotFound(w, r)
 			return
 		}
 

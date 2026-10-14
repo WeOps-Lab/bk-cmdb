@@ -240,12 +240,14 @@ func StartServer(ctx context.Context, cancel context.CancelFunc, e *Engine, HTTP
 		e.srvInfo.Scheme = "https"
 	}
 
+	// pprofEnabled is ignored. /debug/pprof stays closed on this branch.
+	_ = pprofEnabled
 	e.server = Server{
 		ListenAddr:   e.srvInfo.IP,
 		ListenPort:   e.srvInfo.Port,
 		Handler:      e.Metric().HTTPMiddleware(HTTPHandler),
 		TLS:          tlsConf,
-		PProfEnabled: pprofEnabled,
+		PProfEnabled: false,
 	}
 
 	if err := ListenAndServe(e.server, e.SvcDisc, cancel); err != nil {

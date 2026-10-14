@@ -45,6 +45,10 @@ func NewManager(opt *option.Options) Metric {
 func (m *Manager) Actions() []httpserver.Action {
 	var httpactions []httpserver.Action
 	for _, a := range m.ms {
+		// /metrics and /healthz stay closed on this branch.
+		if a.Path == "/metrics" || a.Path == "/healthz" {
+			continue
+		}
 		httpactions = append(httpactions, httpserver.Action{Method: a.Method, Path: a.Path, Handler: func(req *restful.Request, resp *restful.Response) {
 			a.HandlerFunc(resp.ResponseWriter, req.Request)
 		}})

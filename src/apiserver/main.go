@@ -26,8 +26,6 @@ import (
 	"configcenter/src/common/util"
 
 	"github.com/spf13/pflag"
-
-	_ "net/http/pprof"
 )
 
 func main() {

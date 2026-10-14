@@ -17,7 +17,6 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	_ "net/http/pprof" // pprof TODO
 	"os"
 	"os/signal"
 	"strconv"
@@ -31,13 +30,8 @@ import (
 
 // ListenAndServe TODO
 func ListenAndServe(c Server, svcDisc ServiceRegisterInterface, cancel context.CancelFunc) error {
+	// /debug/pprof is closed on this branch. Do not mount net/http/pprof.
 	handler := c.Handler
-	if c.PProfEnabled {
-		rootMux := http.NewServeMux()
-		rootMux.HandleFunc("/", c.Handler.ServeHTTP)
-		rootMux.Handle("/debug/", http.DefaultServeMux)
-		handler = rootMux
-	}
 	server := &http.Server{
 		Addr:    net.JoinHostPort(c.ListenAddr, strconv.FormatUint(uint64(c.ListenPort), 10)),
 		Handler: handler,
